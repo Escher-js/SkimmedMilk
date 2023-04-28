@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -6,6 +6,8 @@ function createWindow() {
         height: 600,
         webPreferences: {
             nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true
         },
     });
 
@@ -24,4 +26,17 @@ app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
     }
+});
+
+ipcMain.on('open-file-dialog', (event) => {
+    const options = {
+        title: 'Select a file',
+        properties: ['openFile'],
+    };
+
+    dialog.showOpenDialog(null, options).then((result) => {
+        if (!result.canceled) {
+            console.log('Selected file:', result.filePaths[0]);
+        }
+    });
 });
