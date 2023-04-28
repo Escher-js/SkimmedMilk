@@ -1,0 +1,12 @@
+{
+  "name": "skimmedmilk",
+  "version": "1.0.0",
+  "description": "追加情報をありがとうございます。それでは、ご説明いただいた内容を元に、モジュール構成とデータの流れをまとめたmermaid記法での図示を作成します。",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC"
+}
