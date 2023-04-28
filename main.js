@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -10,10 +11,24 @@ function createWindow() {
             enableRemoteModule: true
         },
     });
-
+    ipcMain.on('create-new-branch', (event, newBranchName) => {
+        console.error(newBranchName)
+        win.webContents.send('create-new-branch', newBranchName);
+    });
     win.loadFile('index.html');
 }
+function createBranchInputDialog() {
+    const inputDialog = new BrowserWindow({
+        width: 400,
+        height: 200,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+        },
+    });
 
+    inputDialog.loadFile(path.join(__dirname, 'branch_input.html'));
+}
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
@@ -21,13 +36,11 @@ app.on('window-all-closed', () => {
         app.quit();
     }
 });
-
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
     }
 });
-
 ipcMain.on('open-folder-dialog', (event) => {
     const options = {
         title: 'Select a folder',
@@ -55,7 +68,6 @@ ipcMain.on('open-file-dialog', (event) => {
         }
     });
 });
-
 ipcMain.on('save-file-dialog', (event) => {
     const options = {
         title: 'Save file',
@@ -68,4 +80,7 @@ ipcMain.on('save-file-dialog', (event) => {
             event.sender.send('selected-save-path', savePath);
         }
     });
+});
+ipcMain.handle('show-branch-input-dialog', () => {
+    createBranchInputDialog();
 });

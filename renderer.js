@@ -26,6 +26,14 @@ saveBtn.addEventListener('click', () => {
 gitInitBtn.addEventListener('click', () => {
     ipcRenderer.send('open-folder-dialog');
 });
+branchSelect.addEventListener('change', () => {
+    if (branchSelect.value === 'Create new branch') {
+        ipcRenderer.invoke('show-branch-input-dialog');
+        // プルダウンメニューの選択をリセット
+        branchSelect.value = '';
+    }
+});
+
 function saveFile(filePath) {
     const content = textEditor.value;
     fs.writeFile(filePath, content, (err) => {
@@ -48,6 +56,8 @@ function updateBranchList(folderPath) {
         }
 
         const branches = stdout.split('\n').filter(branch => branch.trim() !== '').map(branch => branch.trim());
+        const currentBranch = branches.find(branch => branch.startsWith('*')).slice(1).trim();
+
         branchSelect.innerHTML = '';
 
         // "Create new branch"の項目を追加
@@ -62,6 +72,7 @@ function updateBranchList(folderPath) {
         });
     });
 }
+
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
     fs.readFile(filePath, 'utf-8', (err, data) => {
@@ -119,5 +130,22 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
             // ブランチ一覧を更新
             updateBranchList(folderPath);
         }
+    });
+});
+ipcRenderer.on('create-new-branch', (event, newBranchName) => {
+    const folderPath = folderPathSpan.textContent;
+    console.error(folderPath, newBranchName)
+    exec(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Stderr: ${stderr}`);
+        }
+        console.log(`Stdout: ${stdout}`);
+
+        // ブランチ一覧を更新
+        updateBranchList(folderPath);
     });
 });
