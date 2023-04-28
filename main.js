@@ -28,15 +28,16 @@ app.on('activate', () => {
     }
 });
 
-ipcMain.on('open-file-dialog', (event) => {
+ipcMain.on('open-folder-dialog', (event) => {
     const options = {
-        title: 'Select a file',
-        properties: ['openFile'],
+        title: 'Select a folder',
+        properties: ['openDirectory'],
     };
 
     dialog.showOpenDialog(null, options).then((result) => {
         if (!result.canceled) {
-            console.log('Selected file:', result.filePaths[0]);
+            const folderPath = result.filePaths[0];
+            event.sender.send('selected-folder', folderPath);
         }
     });
 });

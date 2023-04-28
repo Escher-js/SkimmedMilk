@@ -1,8 +1,10 @@
 const { ipcRenderer } = require('electron');
 const fs = require('fs');
+const { exec } = require('child_process');
 
 const fileBtn = document.getElementById('file-btn');
 const saveBtn = document.getElementById('save-btn');
+const gitInitBtn = document.getElementById('git-init-btn');
 const textEditor = document.getElementById('text-editor');
 
 let currentFilePath = null;
@@ -45,3 +47,21 @@ function saveFile(filePath) {
         console.log('File saved:', filePath);
     });
 }
+
+gitInitBtn.addEventListener('click', () => {
+    ipcRenderer.send('open-folder-dialog');
+});
+
+ipcRenderer.on('selected-folder', (event, folderPath) => {
+    exec(`git init "${folderPath}"`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Stderr: ${stderr}`);
+            return;
+        }
+        console.log(`Stdout: ${stdout}`);
+    });
+});
