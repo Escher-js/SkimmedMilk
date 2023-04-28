@@ -1,18 +1,21 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, dialog } = require('electron');
 const fs = require('fs');
 const { exec } = require('child_process');
+const { defaultGitignoreContent } = require('./gitignore_defaults');
 
 const fileBtn = document.getElementById('file-btn');
 const saveBtn = document.getElementById('save-btn');
 const gitInitBtn = document.getElementById('git-init-btn');
 const textEditor = document.getElementById('text-editor');
+const folderPathSpan = document.getElementById('folder-path');
+const gitStatusSpan = document.getElementById('git-status');
+const branchSelect = document.getElementById('branch-select');
 
 let currentFilePath = null;
 
 fileBtn.addEventListener('click', () => {
     ipcRenderer.send('open-file-dialog');
 });
-
 saveBtn.addEventListener('click', () => {
     if (currentFilePath) {
         saveFile(currentFilePath);
@@ -20,23 +23,9 @@ saveBtn.addEventListener('click', () => {
         ipcRenderer.send('save-file-dialog');
     }
 });
-
-ipcRenderer.on('selected-file', (event, filePath) => {
-    currentFilePath = filePath;
-    fs.readFile(filePath, 'utf-8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        textEditor.value = data;
-    });
+gitInitBtn.addEventListener('click', () => {
+    ipcRenderer.send('open-folder-dialog');
 });
-
-ipcRenderer.on('selected-save-path', (event, savePath) => {
-    currentFilePath = savePath;
-    saveFile(currentFilePath);
-});
-
 function saveFile(filePath) {
     const content = textEditor.value;
     fs.writeFile(filePath, content, (err) => {
@@ -47,13 +36,8 @@ function saveFile(filePath) {
         console.log('File saved:', filePath);
     });
 }
-
-gitInitBtn.addEventListener('click', () => {
-    ipcRenderer.send('open-folder-dialog');
-});
-
-ipcRenderer.on('selected-folder', (event, folderPath) => {
-    exec(`git init "${folderPath}"`, (error, stdout, stderr) => {
+function updateBranchList(folderPath) {
+    exec(`git -C "${folderPath}" for-each-ref --format="%(refname:short)" refs/heads/`, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
             return;
@@ -62,6 +46,78 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
             console.error(`Stderr: ${stderr}`);
             return;
         }
-        console.log(`Stdout: ${stdout}`);
+
+        const branches = stdout.split('\n').filter(branch => branch.trim() !== '').map(branch => branch.trim());
+        branchSelect.innerHTML = '';
+
+        // "Create new branch"の項目を追加
+        const createNewBranchOption = document.createElement('option');
+        createNewBranchOption.text = 'Create new branch';
+        branchSelect.add(createNewBranchOption);
+
+        branches.forEach(branch => {
+            const option = document.createElement('option');
+            option.text = branch;
+            branchSelect.add(option);
+        });
+    });
+}
+ipcRenderer.on('selected-file', (event, filePath) => {
+    currentFilePath = filePath;
+    fs.readFile(filePath, 'utf-8', (err, data) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        textEditor.value = data;
+    });
+});
+ipcRenderer.on('selected-save-path', (event, savePath) => {
+    currentFilePath = savePath;
+    saveFile(currentFilePath);
+});
+ipcRenderer.on('selected-folder', (event, folderPath) => {
+    // フォルダパスを表示
+    folderPathSpan.textContent = folderPath;
+
+    fs.access(`${folderPath}/.git`, fs.constants.F_OK, (err) => {
+        if (err) {
+            // .gitフォルダが存在しない場合
+            gitStatusSpan.innerHTML = '<span style="color: red;">&#11044;</span>';
+
+            const gitInitConfirmed = confirm('This folder is not a git repository. Do you want to run "git init"?');
+            if (gitInitConfirmed) {
+                exec(`git -C "${folderPath}" init`, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Error: ${error.message}`);
+                        return;
+                    }
+                    if (stderr) {
+                        console.error(`Stderr: ${stderr}`);
+                        return;
+                    }
+                    console.log(`Stdout: ${stdout}`);
+                    gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+
+                    // .gitignoreファイルを作成して書き込む
+                    fs.writeFile(`${folderPath}/.gitignore`, defaultGitignoreContent, (error) => {
+                        if (error) {
+                            console.error(`Error: ${error.message}`);
+                            return;
+                        }
+                        console.log('Created .gitignore file');
+                    });
+
+                    // ブランチ一覧を更新
+                    updateBranchList(folderPath);
+                });
+            }
+        } else {
+            // .gitフォルダが存在する場合
+            gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+
+            // ブランチ一覧を更新
+            updateBranchList(folderPath);
+        }
     });
 });
