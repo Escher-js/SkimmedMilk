@@ -40,3 +40,31 @@ ipcMain.on('open-file-dialog', (event) => {
         }
     });
 });
+ipcMain.on('open-file-dialog', (event) => {
+    const options = {
+        title: 'Select a file',
+        properties: ['openFile'],
+        filters: [{ name: 'Markdown', extensions: ['md'] }],
+    };
+
+    dialog.showOpenDialog(null, options).then((result) => {
+        if (!result.canceled) {
+            const filePath = result.filePaths[0];
+            event.sender.send('selected-file', filePath);
+        }
+    });
+});
+
+ipcMain.on('save-file-dialog', (event) => {
+    const options = {
+        title: 'Save file',
+        filters: [{ name: 'Markdown', extensions: ['md'] }],
+    };
+
+    dialog.showSaveDialog(null, options).then((result) => {
+        if (!result.canceled) {
+            const savePath = result.filePath;
+            event.sender.send('selected-save-path', savePath);
+        }
+    });
+});
