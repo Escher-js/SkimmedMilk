@@ -27,7 +27,7 @@ gitInitBtn.addEventListener('click', () => {
     ipcRenderer.send('open-folder-dialog');
 });
 branchSelect.addEventListener('change', () => {
-    if (branchSelect.value === 'Create new branch') {
+    if (branchSelect.value === 'create-new-branch') {
         ipcRenderer.invoke('show-branch-input-dialog');
         // プルダウンメニューの選択をリセット
         branchSelect.value = '';
@@ -45,7 +45,8 @@ function saveFile(filePath) {
     });
 }
 function updateBranchList(folderPath) {
-    exec(`git -C "${folderPath}" for-each-ref --format="%(refname:short)" refs/heads/`, (error, stdout, stderr) => {
+    // ブランチの一覧を取得する
+    exec(`git -C "${folderPath}" branch`, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
             return;
@@ -54,24 +55,34 @@ function updateBranchList(folderPath) {
             console.error(`Stderr: ${stderr}`);
             return;
         }
-
-        const branches = stdout.split('\n').filter(branch => branch.trim() !== '').map(branch => branch.trim());
+        console.log(stdout)
+        const branches = stdout.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
         const currentBranch = branches.find(branch => branch.startsWith('*')).slice(1).trim();
-
+        console.log(branches)
+        // プルダウンメニューをクリア
         branchSelect.innerHTML = '';
 
-        // "Create new branch"の項目を追加
-        const createNewBranchOption = document.createElement('option');
-        createNewBranchOption.text = 'Create new branch';
-        branchSelect.add(createNewBranchOption);
-
+        // 新しいオプションを追加する
         branches.forEach(branch => {
             const option = document.createElement('option');
-            option.text = branch;
-            branchSelect.add(option);
+            option.value = branch.replace('*', '').trim();
+            option.textContent = option.value;
+
+            if (branch.startsWith('*')) {
+                option.selected = true;
+            }
+
+            branchSelect.appendChild(option);
         });
+
+        // 'Create new branch' オプションを追加
+        const createNewBranchOption = document.createElement('option');
+        createNewBranchOption.value = 'create-new-branch';
+        createNewBranchOption.textContent = 'Create new branch';
+        branchSelect.appendChild(createNewBranchOption);
     });
 }
+
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
