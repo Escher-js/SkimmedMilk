@@ -22,12 +22,58 @@ saveBtn.addEventListener('click', () => {
 gitInitBtn.addEventListener('click', () => {
     ipcRenderer.send('open-folder-dialog');
 });
-branchSelect.addEventListener('change', () => {
-    if (branchSelect.value === 'create-new-branch') {
-        ipcRenderer.invoke('show-branch-input-dialog');
-        // プルダウンメニューの選択をリセット
-        branchSelect.value = '';
+branchSelect.addEventListener('change', async () => {
+    const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
+    const folderPath = folderPathSpan.textContent;
+
+    if (selectedBranch === 'create-new-branch') {
+        // show-branch-input-dialogを待機するPromiseを定義
+        const waitForBranchInputDialog = async () => {
+            return new Promise((resolve) => {
+                ipcRenderer.once('branch-input-dialog-closed', () => {
+                    resolve();
+                });
+            });
+        };
+
+        // ダイアログが閉じるのを待つ
+        await ipcRenderer.invoke('show-branch-input-dialog');
+        await waitForBranchInputDialog();
+
+        // ブランチリストを更新
+        await updateBranchList();
+        return;
     }
+    // 選択されたブランチにチェックアウト
+    await new Promise((resolve, reject) => {
+        exec(`git -C "${folderPath}" checkout "${selectedBranch}"`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            console.log(`Branch switched: ${stdout}`);
+            resolve();
+        });
+    });
+
+    // 最新のコミットからファイルを読み込み
+    const fileContent = await new Promise((resolve, reject) => {
+        fs.readFile(`${currentFilePath}`, 'utf-8', (error, data) => {
+            if (error) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            resolve(data);
+        });
+    });
+
+    // テキストエディタにファイル内容を表示
+    textEditor.value = fileContent;
 });
 
 function saveFile(filePath) {
@@ -78,7 +124,6 @@ function updateBranchList(folderPath) {
         branchSelect.appendChild(createNewBranchOption);
     });
 }
-// コミット処理を実行する関数
 async function commitChanges() {
     const folderPath = folderPathSpan.textContent;
     const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
@@ -123,8 +168,6 @@ async function commitChanges() {
         console.log('No changes detected');
     }
 }
-
-
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
