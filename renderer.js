@@ -129,7 +129,7 @@ async function commitChanges() {
     const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
 
     // 保存
-    fs.writeFileSync(`${folderPath}/sample.md`, textEditor.value);
+    fs.writeFileSync(`${currentFilePath}`, textEditor.value);
 
     // git status を実行して変更を検出
     const gitStatus = await new Promise((resolve, reject) => {
