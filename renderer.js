@@ -23,12 +23,27 @@ gitInitBtn.addEventListener('click', () => {
     ipcRenderer.send('open-folder-dialog');
 });
 branchSelect.addEventListener('change', async () => {
-    if (branchSelect.value === 'create-new-branch') {
-        ipcRenderer.invoke('show-branch-input-dialog');
-    }
-
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
+
+    if (selectedBranch === 'create-new-branch') {
+        // show-branch-input-dialogを待機するPromiseを定義
+        const waitForBranchInputDialog = async () => {
+            return new Promise((resolve) => {
+                ipcRenderer.once('branch-input-dialog-closed', () => {
+                    resolve();
+                });
+            });
+        };
+
+        // ダイアログが閉じるのを待つ
+        await ipcRenderer.invoke('show-branch-input-dialog');
+        await waitForBranchInputDialog();
+
+        // ブランチリストを更新
+        await updateBranchList();
+        return;
+    }
     // 選択されたブランチにチェックアウト
     await new Promise((resolve, reject) => {
         exec(`git -C "${folderPath}" checkout "${selectedBranch}"`, (error, stdout, stderr) => {
