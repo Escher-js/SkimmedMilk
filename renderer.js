@@ -17,11 +17,7 @@ fileBtn.addEventListener('click', () => {
     ipcRenderer.send('open-file-dialog');
 });
 saveBtn.addEventListener('click', () => {
-    if (currentFilePath) {
-        saveFile(currentFilePath);
-    } else {
-        ipcRenderer.send('save-file-dialog');
-    }
+    commitChanges();
 });
 gitInitBtn.addEventListener('click', () => {
     ipcRenderer.send('open-folder-dialog');
@@ -82,6 +78,52 @@ function updateBranchList(folderPath) {
         branchSelect.appendChild(createNewBranchOption);
     });
 }
+// コミット処理を実行する関数
+async function commitChanges() {
+    const folderPath = folderPathSpan.textContent;
+    const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
+
+    // 保存
+    fs.writeFileSync(`${folderPath}/sample.md`, textEditor.value);
+
+    // git status を実行して変更を検出
+    const gitStatus = await new Promise((resolve, reject) => {
+        exec(`git -C "${folderPath}" status --porcelain`, (error, stdout, stderr) => {
+            if (error) {
+                reject(`Error: ${error.message}`);
+                return;
+            }
+            if (stderr) {
+                reject(`Stderr: ${stderr}`);
+                return;
+            }
+            resolve(stdout);
+        });
+    });
+
+    // 変更がある場合のみコミット
+    if (gitStatus.trim() !== '') {
+        const commitMessage = `Auto-commit on ${new Date().toLocaleString()}`;
+
+        exec(
+            `git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`,
+            (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`Error: ${error.message}`);
+                    return;
+                }
+                if (stderr) {
+                    console.error(`Stderr: ${stderr}`);
+                    return;
+                }
+                console.log(`Commit successful: ${stdout}`);
+            }
+        );
+    } else {
+        console.log('No changes detected');
+    }
+}
+
 
 
 ipcRenderer.on('selected-file', (event, filePath) => {
@@ -145,7 +187,6 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
 });
 ipcRenderer.on('create-new-branch', (event, newBranchName) => {
     const folderPath = folderPathSpan.textContent;
-    console.error(folderPath, newBranchName)
     exec(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
@@ -160,3 +201,6 @@ ipcRenderer.on('create-new-branch', (event, newBranchName) => {
         updateBranchList(folderPath);
     });
 });
+
+setInterval(commitChanges, 60 * 1000);
+
