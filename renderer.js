@@ -75,18 +75,17 @@ branchSelect.addEventListener('change', async () => {
     // テキストエディタにファイル内容を表示
     textEditor.value = fileContent;
 });
+window.addEventListener('beforeunload', async (event) => {
+    if (currentFilePath) {
+        await commitChanges('Auto-commit on window close');
+    }
+});
 
 function saveFile(filePath) {
-    const content = textEditor.value;
-    fs.writeFile(filePath, content, (err) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        console.log('File saved:', filePath);
-    });
+    commitChanges()
 }
-function updateBranchList(folderPath) {
+function updateBranchList() {
+    const folderPath = folderPathSpan.textContent;
     // ブランチの一覧を取得する
     exec(`git -C "${folderPath}" branch`, (error, stdout, stderr) => {
         if (error) {
@@ -99,7 +98,7 @@ function updateBranchList(folderPath) {
         }
         console.log(stdout)
         const branches = stdout.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
-        const currentBranch = branches.find(branch => branch.startsWith('*')).slice(1).trim();
+        // const currentBranch = branches.find(branch => branch.startsWith('*')).slice(1).trim();
         console.log(branches)
         // プルダウンメニューをクリア
         branchSelect.innerHTML = '';
@@ -126,7 +125,7 @@ function updateBranchList(folderPath) {
 }
 async function commitChanges() {
     const folderPath = folderPathSpan.textContent;
-    const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
+    // const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
 
     // 保存
     fs.writeFileSync(`${currentFilePath}`, textEditor.value);
@@ -244,6 +243,7 @@ ipcRenderer.on('create-new-branch', (event, newBranchName) => {
         updateBranchList(folderPath);
     });
 });
+
 
 setInterval(commitChanges, 60 * 1000);
 
