@@ -1,12 +1,33 @@
 {
   "name": "skimmedmilk",
   "version": "1.0.0",
-  "description": "追加情報をありがとうございます。それでは、ご説明いただいた内容を元に、モジュール構成とデータの流れをまとめたmermaid記法での図示を作成します。",
+  "description": "Your app description",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
-  "author": "",
-  "license": "ISC"
+  "build": {
+    "appId": "com.yourcompany.yourapp",
+    "productName": "skimmed-milk",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "files": [
+      "**/*"
+    ]
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-rpm": "^6.1.1",
+    "@electron-forge/maker-squirrel": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "electron": "^13.6.9"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0"
+  }
 }
