@@ -11,6 +11,31 @@ const folderPathSpan = document.getElementById('folder-path');
 const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
+const path = require('path');
+const appPath = '/Users/ti/Documents/code/sample';//path.dirname(require.main.filename);
+const bodyMdPath = path.join(appPath, 'body.md');
+
+// body.mdファイルを作成または読み込む
+async function loadBodyMd() {
+    if (!fs.existsSync(bodyMdPath)) {
+        fs.writeFileSync(bodyMdPath, '', 'utf8');
+    }
+
+    const fileContent = await fs.promises.readFile(bodyMdPath, 'utf8');
+    const textEditor = document.getElementById('text-editor');
+    textEditor.value = fileContent;
+}
+
+// 省略
+
+(async () => {
+    // body.mdファイルを読み込む
+    await loadBodyMd();
+
+    // 省略
+})();
+
+
 let currentFilePath = null;
 
 fileBtn.addEventListener('click', () => {
