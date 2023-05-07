@@ -28,6 +28,7 @@
     "electron": "^13.6.9"
   },
   "dependencies": {
+    "diff2html": "^3.4.35",
     "electron-squirrel-startup": "^1.0.0"
   }
 }

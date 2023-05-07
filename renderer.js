@@ -231,10 +231,33 @@ async function getCommitDiff(commitHash) {
         });
     });
 }
+
 function showDiff(diff) {
     const diffContainer = document.getElementById('diff-container');
-    diffContainer.textContent = diff;
+
+    // 差分を HTML 形式に変換
+    const htmlDiff = window.electronAPI.getDiffHtml(diff);
+
+    // 変更点を横に並べて表示
+    diffContainer.innerHTML = htmlDiff;
 }
+
+
+
+// function showDiff(diff) {
+//     const diffContainer = document.getElementById('diff-container');
+
+//     // 差分をHTML形式に変換
+//     const htmlDiff = Diff2Html.getPrettyHtml(diff, {
+//         inputFormat: 'diff',
+//         showFiles: false,
+//         matching: 'lines',
+//         outputFormat: 'side-by-side',
+//     });
+
+//     // 変更点を横に並べて表示
+//     diffContainer.innerHTML = htmlDiff;
+// }
 async function getCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;

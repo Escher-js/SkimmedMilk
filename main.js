@@ -8,8 +8,9 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            enableRemoteModule: true
-        },
+            enableRemoteModule: true,
+            preload: path.join(__dirname, 'preload.js'),
+        }
     });
     ipcMain.on('create-new-branch', (event, newBranchName) => {
         console.error(newBranchName)
