@@ -14,9 +14,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
             outputFormat: 'side-by-side',
         });
     },
-    // fs, child_process, gitignoreDefaults を使用するメソッドを追加
-    readFile: (path) => fs.readFileSync(path, 'utf-8'),
-    writeFile: (path, data) => fs.writeFileSync(path, data),
+    access: (path, callback) => {
+        fs.access(path, fs.constants.F_OK, callback);
+    },
+
+    writeFile: (path, data, callback) => {
+        fs.writeFile(path, data, callback);
+    },
+
+    readFile: (path, options, callback) => {
+        fs.readFile(path, options, callback);
+    },
+
+    readFileSync: (path, options) => {
+        return fs.readFileSync(path, options);
+    },
+
+    writeFileSync: (path, data, options) => {
+        fs.writeFileSync(path, data, options);
+    },
+
+    existsSync: (path) => {
+        return fs.existsSync(path);
+    },
+
+    promises: {
+        readFile: (path, options) => fs.promises.readFile(path, options),
+        rm: (path, options) => fs.promises.rm(path, options),
+    },
     exec: (command, options) => {
         return new Promise((resolve, reject) => {
             exec(command, options, (error, stdout, stderr) => {
