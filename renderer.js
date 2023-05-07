@@ -99,10 +99,6 @@ branchSelect.addEventListener('change', async () => {
 
     // テキストエディタにファイル内容を表示
     textEditor.value = fileContent;
-});
-branchSelect.addEventListener('change', async () => {
-    // 省略
-    // ブランチを切り替えた後、コミット一覧を表示
     await showCommitList();
 });
 window.addEventListener('beforeunload', async (event) => {
