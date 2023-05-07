@@ -1,8 +1,3 @@
-const { ipcRenderer, dialog } = require('electron');
-const fs = require('fs');
-const { exec } = require('child_process');
-const { defaultGitignoreContent } = require('./gitignore_defaults');
-
 const fileBtn = document.getElementById('file-btn');
 const saveBtn = document.getElementById('save-btn');
 const gitInitBtn = document.getElementById('git-init-btn');

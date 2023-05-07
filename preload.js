@@ -14,4 +14,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
             outputFormat: 'side-by-side',
         });
     },
+    // fs, child_process, gitignoreDefaults を使用するメソッドを追加
+    readFile: (path) => fs.readFileSync(path, 'utf-8'),
+    writeFile: (path, data) => fs.writeFileSync(path, data),
+    exec: (command, options) => {
+        return new Promise((resolve, reject) => {
+            exec(command, options, (error, stdout, stderr) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+    },
+    getGitignoreDefaults: () => gitignoreDefaults,
 });
