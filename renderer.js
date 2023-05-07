@@ -272,6 +272,19 @@ async function showSelectedCommit(commitHash) {
 
     // クローンを作成
     await new Promise((resolve, reject) => {
+        window.electronAPI.exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            console.log(`Cloned repository: ${stdout}`);
+            resolve();
+        });
+
         exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
