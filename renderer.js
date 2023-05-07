@@ -14,6 +14,7 @@ const branchSelect = document.getElementById('branch-select');
 const path = require('path');
 const appPath = '/Users/ti/Documents/code/sample';//path.dirname(require.main.filename);
 const bodyMdPath = path.join(appPath, 'body.md');
+let currentFilePath = null;
 
 // body.mdファイルを作成または読み込む
 async function loadBodyMd() {
@@ -25,18 +26,13 @@ async function loadBodyMd() {
     const textEditor = document.getElementById('text-editor');
     textEditor.value = fileContent;
 }
-
-// 省略
-
 (async () => {
     // body.mdファイルを読み込む
     await loadBodyMd();
-
-    // 省略
 })();
 
 
-let currentFilePath = null;
+
 
 fileBtn.addEventListener('click', () => {
     ipcRenderer.send('open-file-dialog');
@@ -232,27 +228,16 @@ async function showCommitList() {
 }
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
+    const cloneFolderPath = path.join(appPath, 'temp-clone');
 
-    // フォルダ内の.mdファイルを探す
-    const mdFiles = await new Promise((resolve, reject) => {
-        fs.readdir(folderPath, (err, files) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            resolve(files.filter(file => file.endsWith('.md')));
-        });
-    });
-
-    if (mdFiles.length === 0) {
-        console.error('No markdown files found in the folder');
-        return;
+    // クローンフォルダが存在する場合は削除
+    if (fs.existsSync(cloneFolderPath)) {
+        await fs.promises.rm(cloneFolderPath, { recursive: true, force: true });
     }
 
-    const mdFileName = mdFiles[0]; // 最初に見つかった.mdファイルを使用する
-
-    const fileContent = await new Promise((resolve, reject) => {
-        exec(`git -C "${folderPath}" show ${commitHash}:${mdFileName}`, (error, stdout, stderr) => {
+    // クローンを作成
+    await new Promise((resolve, reject) => {
+        exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
@@ -261,13 +246,28 @@ async function showSelectedCommit(commitHash) {
             if (stderr) {
                 console.error(`Stderr: ${stderr}`);
             }
-            resolve(stdout);
+            console.log(`Cloned repository: ${stdout}`);
+            resolve();
         });
     });
 
-    const textEditor = document.getElementById('text-editor');
-    textEditor.value = fileContent;
+    // 選択したコミットまで戻す
+    await new Promise((resolve, reject) => {
+        exec(`git -C "${cloneFolderPath}" checkout "${commitHash}"`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            console.log(`Checked out commit: ${stdout}`);
+            resolve();
+        });
+    });
 }
+
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
@@ -314,18 +314,13 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
                         }
                         console.log('Created .gitignore file');
                     });
-
-                    // ブランチ一覧を更新
-                    updateBranchList(folderPath);
                 });
             }
         } else {
             // .gitフォルダが存在する場合
             gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
-
-            // ブランチ一覧を更新
-            updateBranchList(folderPath);
         }
+        updateBranchList(folderPath);
     });
 });
 ipcRenderer.on('create-new-branch', (event, newBranchName) => {
