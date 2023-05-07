@@ -284,24 +284,11 @@ async function showSelectedCommit(commitHash) {
             console.log(`Cloned repository: ${stdout}`);
             resolve();
         });
-
-        exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
-            if (error && error.code !== 0) {
-                console.error(`Error: ${error.message}`);
-                reject(error);
-                return;
-            }
-            if (stderr) {
-                console.error(`Stderr: ${stderr}`);
-            }
-            console.log(`Cloned repository: ${stdout}`);
-            resolve();
-        });
     });
 
     // 選択したコミットまで戻す
     await new Promise((resolve, reject) => {
-        exec(`git -C "${cloneFolderPath}" checkout "${commitHash}"`, (error, stdout, stderr) => {
+        window.electronAPI.exec(`git -C "${cloneFolderPath}" checkout "${commitHash}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
