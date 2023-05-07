@@ -21,7 +21,6 @@ async function loadBodyMd() {
     const textEditor = document.getElementById('text-editor');
     textEditor.value = fileContent;
 }
-
 (async () => {
     // body.mdファイルを読み込む
     await loadBodyMd();
@@ -97,7 +96,7 @@ window.addEventListener('beforeunload', async (event) => {
     }
 });
 
-function saveFile(filePath) {
+function saveFile() {
     commitChanges()
 }
 function updateBranchList() {
@@ -228,7 +227,6 @@ async function getCommitDiff(commitHash) {
         });
     });
 }
-
 function showDiff(diff) {
     const diffContainer = document.getElementById('diff-container');
 
@@ -238,23 +236,6 @@ function showDiff(diff) {
     // 変更点を横に並べて表示
     diffContainer.innerHTML = htmlDiff;
 }
-
-
-
-// function showDiff(diff) {
-//     const diffContainer = document.getElementById('diff-container');
-
-//     // 差分をHTML形式に変換
-//     const htmlDiff = Diff2Html.getPrettyHtml(diff, {
-//         inputFormat: 'diff',
-//         showFiles: false,
-//         matching: 'lines',
-//         outputFormat: 'side-by-side',
-//     });
-
-//     // 変更点を横に並べて表示
-//     diffContainer.innerHTML = htmlDiff;
-// }
 async function getCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
@@ -341,7 +322,7 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
     // フォルダパスを表示
     folderPathSpan.textContent = folderPath;
 
-    fs.access(`${folderPath}/.git`, fs.constants.F_OK, (err) => {
+    window.electronAPI.access(`${folderPath}/.git`, (err) => {
         if (err) {
             // .gitフォルダが存在しない場合
             gitStatusSpan.innerHTML = '<span style="color: red;">&#11044;</span>';
@@ -361,7 +342,7 @@ ipcRenderer.on('selected-folder', (event, folderPath) => {
                     gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
 
                     // .gitignoreファイルを作成して書き込む
-                    fs.writeFile(`${folderPath}/.gitignore`, defaultGitignoreContent, (error) => {
+                    window.electronAPI.writeFile(`${folderPath}/.gitignore`, defaultGitignoreContent, (error) => {
                         if (error) {
                             console.error(`Error: ${error.message}`);
                             return;
