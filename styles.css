@@ -1,0 +1,25 @@
+/* 省略 */
+
+#main {
+    display: flex;
+    width: 100%;
+}
+
+#text-editor {
+    flex-grow: 1;
+    resize: none;
+    width: 100%;
+}
+
+
+#commit-list-pane {
+    width: 300px;
+    padding: 1rem;
+    border-left: 1px solid #ccc;
+}
+
+#commit-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
