@@ -13,14 +13,15 @@ let currentFilePath = null;
 
 // body.mdファイルを作成または読み込む
 async function loadBodyMd() {
-    if (!fs.existsSync(bodyMdPath)) {
-        fs.writeFileSync(bodyMdPath, '', 'utf8');
+    if (!window.electronAPI.readFile(bodyMdPath)) {
+        window.electronAPI.writeFile(bodyMdPath, '');
     }
 
-    const fileContent = await fs.promises.readFile(bodyMdPath, 'utf8');
+    const fileContent = window.electronAPI.readFile(bodyMdPath);
     const textEditor = document.getElementById('text-editor');
     textEditor.value = fileContent;
 }
+
 (async () => {
     // body.mdファイルを読み込む
     await loadBodyMd();
