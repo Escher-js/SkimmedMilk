@@ -173,6 +173,7 @@ async function commitChanges() {
     }
 }
 async function showCommitList() {
+
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
 
@@ -201,10 +202,51 @@ async function showCommitList() {
     commitLines.forEach((commitLine) => {
         const listItem = document.createElement('li');
         listItem.textContent = commitLine;
+        listItem.addEventListener('click', () => {
+            const commitHash = commitLine.split(' ')[0];
+            showSelectedCommit(commitHash);
+        });
         commitList.appendChild(listItem);
     });
 }
+async function showSelectedCommit(commitHash) {
+    const folderPath = folderPathSpan.textContent;
 
+    // フォルダ内の.mdファイルを探す
+    const mdFiles = await new Promise((resolve, reject) => {
+        fs.readdir(folderPath, (err, files) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(files.filter(file => file.endsWith('.md')));
+        });
+    });
+
+    if (mdFiles.length === 0) {
+        console.error('No markdown files found in the folder');
+        return;
+    }
+
+    const mdFileName = mdFiles[0]; // 最初に見つかった.mdファイルを使用する
+
+    const fileContent = await new Promise((resolve, reject) => {
+        exec(`git -C "${folderPath}" show ${commitHash}:${mdFileName}`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            resolve(stdout);
+        });
+    });
+
+    const textEditor = document.getElementById('text-editor');
+    textEditor.value = fileContent;
+}
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
