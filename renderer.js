@@ -76,7 +76,7 @@ branchSelect.addEventListener('change', async () => {
 
     // 最新のコミットからファイルを読み込み
     const fileContent = await new Promise((resolve, reject) => {
-        fs.readFile(`${currentFilePath}`, 'utf-8', (error, data) => {
+        window.electronAPI.readFile(`${currentFilePath}`, (error, data) => {
             if (error) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
@@ -85,6 +85,7 @@ branchSelect.addEventListener('change', async () => {
             resolve(data);
         });
     });
+
 
     // テキストエディタにファイル内容を表示
     textEditor.value = fileContent;
@@ -143,7 +144,7 @@ async function commitChanges() {
     // const currentBranch = branchSelect.options[branchSelect.selectedIndex].value;
 
     // 保存
-    fs.writeFileSync(`${currentFilePath}`, textEditor.value);
+    window.electronAPI.writeFile(`${currentFilePath}`, textEditor.value);
 
     // git status を実行して変更を検出
     const gitStatus = await new Promise((resolve, reject) => {
@@ -283,9 +284,10 @@ async function showSelectedCommit(commitHash) {
     const cloneFolderPath = path.join(appPath, 'temp-clone');
 
     // クローンフォルダが存在する場合は削除
-    if (fs.existsSync(cloneFolderPath)) {
-        await fs.promises.rm(cloneFolderPath, { recursive: true, force: true });
+    if (window.electronAPI.exists(cloneFolderPath)) {
+        await window.electronAPI.rm(cloneFolderPath, { recursive: true, force: true });
     }
+
 
     // クローンを作成
     await new Promise((resolve, reject) => {
@@ -322,13 +324,14 @@ async function showSelectedCommit(commitHash) {
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
-    fs.readFile(filePath, 'utf-8', (err, data) => {
+    window.electronAPI.readFile(filePath, (err, data) => {
         if (err) {
             console.error(err);
             return;
         }
         textEditor.value = data;
     });
+
 });
 ipcRenderer.on('selected-save-path', (event, savePath) => {
     currentFilePath = savePath;
