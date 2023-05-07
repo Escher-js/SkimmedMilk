@@ -31,9 +31,6 @@ async function loadBodyMd() {
     await loadBodyMd();
 })();
 
-
-
-
 fileBtn.addEventListener('click', () => {
     ipcRenderer.send('open-file-dialog');
 });
@@ -190,7 +187,55 @@ async function commitChanges() {
     }
 }
 async function showCommitList() {
+    // コミットリストを取得
+    const commitLines = await getCommitList();
 
+    // コミットリストを表示
+    const commitListContainer = document.getElementById('commit-list');
+    commitListContainer.innerHTML = '';
+
+    commitLines.forEach((commit) => {
+        console.log(commit)
+        const listItem = document.createElement('li');
+        listItem.textContent = commit; //`${commit.shortHash} - ${commit.message}`
+        listItem.addEventListener('click', () => {
+            const commitHash = commit.split(' ')[0];
+            showSelectedCommit(commitHash);
+        });
+        // マウスオーバー時に差分を表示するイベントリスナーを追加
+        listItem.addEventListener('mouseover', async () => {
+            const commitHash = commit.split(' ')[0];
+            const diff = await getCommitDiff(commitHash);
+            showDiff(diff);
+        });
+        commitListContainer.appendChild(listItem);
+    });
+
+}
+async function getCommitDiff(commitHash) {
+
+    const folderPath = folderPathSpan.textContent;
+
+    return new Promise((resolve, reject) => {
+        console.log(commitHash)
+        exec(`git -C "${folderPath}" show "${commitHash}"`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            resolve(stdout);
+        });
+    });
+}
+function showDiff(diff) {
+    const diffContainer = document.getElementById('diff-container');
+    diffContainer.textContent = diff;
+}
+async function getCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
 
@@ -211,20 +256,8 @@ async function showCommitList() {
             resolve(stdout);
         });
     });
+    return commitLogOutput.split('\n');
 
-    const commitList = document.getElementById('commit-list');
-    commitList.innerHTML = '';
-
-    const commitLines = commitLogOutput.split('\n');
-    commitLines.forEach((commitLine) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = commitLine;
-        listItem.addEventListener('click', () => {
-            const commitHash = commitLine.split(' ')[0];
-            showSelectedCommit(commitHash);
-        });
-        commitList.appendChild(listItem);
-    });
 }
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
@@ -267,7 +300,6 @@ async function showSelectedCommit(commitHash) {
         });
     });
 }
-
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;
