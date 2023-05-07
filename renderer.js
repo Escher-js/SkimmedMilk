@@ -75,6 +75,11 @@ branchSelect.addEventListener('change', async () => {
     // テキストエディタにファイル内容を表示
     textEditor.value = fileContent;
 });
+branchSelect.addEventListener('change', async () => {
+    // 省略
+    // ブランチを切り替えた後、コミット一覧を表示
+    await showCommitList();
+});
 window.addEventListener('beforeunload', async (event) => {
     if (currentFilePath) {
         await commitChanges('Auto-commit on window close');
@@ -167,6 +172,39 @@ async function commitChanges() {
         console.log('No changes detected');
     }
 }
+async function showCommitList() {
+    const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
+    const folderPath = folderPathSpan.textContent;
+
+    if (!folderPath || selectedBranch === 'create-new-branch') {
+        return;
+    }
+
+    const commitLogOutput = await new Promise((resolve, reject) => {
+        exec(`git -C "${folderPath}" log --pretty=format:"%h - %s" ${selectedBranch}`, (error, stdout, stderr) => {
+            if (error && error.code !== 0) {
+                console.error(`Error: ${error.message}`);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.error(`Stderr: ${stderr}`);
+            }
+            resolve(stdout);
+        });
+    });
+
+    const commitList = document.getElementById('commit-list');
+    commitList.innerHTML = '';
+
+    const commitLines = commitLogOutput.split('\n');
+    commitLines.forEach((commitLine) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = commitLine;
+        commitList.appendChild(listItem);
+    });
+}
+
 
 ipcRenderer.on('selected-file', (event, filePath) => {
     currentFilePath = filePath;

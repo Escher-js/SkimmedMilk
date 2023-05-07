@@ -3,10 +3,13 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>My Electron App</title>
+    <meta charset="UTF-8">
+    <title>Markdown Git Editor</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+
     <h1>Hello, Electron!</h1>
     <button id="file-btn">Open</button>
     <button id="save-btn">Save</button>
@@ -18,7 +21,14 @@
         <option>Select Folder First</option>
     </select>
     <br />
-    <textarea id="text-editor" rows="20" cols="80"></textarea>
+    <div id="main">
+        <textarea id="text-editor"></textarea>
+        <!-- 追加: コミット一覧を表示する右側ペイン -->
+        <div id="commit-list-pane">
+            <h3>Commit List</h3>
+            <ul id="commit-list"></ul>
+        </div>
+    </div>
 
     <script src="renderer.js"></script>
 </body>
