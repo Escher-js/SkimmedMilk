@@ -66,9 +66,14 @@ app.whenReady().then(async () => {
             modal: true,
             width: 400,
             height: 300,
-            backgroundColor: '#ffffff', // 背景色を白に設定
-            webPreferences: { nodeIntegration: true },
+            backgroundColor: '#ffffff',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
+            },
         });
+
 
         win.loadFile('gitconfig.html');
     }
