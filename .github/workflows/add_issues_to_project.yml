@@ -1,20 +1,19 @@
-name: Add new issues to project
+name: Assign custom field to new issues
 
 on:
   issues:
     types: [opened]
 
 jobs:
-  add_issue_to_project:
+  assign_custom_field:
     runs-on: ubuntu-latest
     steps:
-    - name: Add issue to project
+    - name: Assign custom field
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         curl --request POST \
-          --url https://api.github.com/repos/${{ github.repository }}/projects/columns/${{ secrets.PROJECT_COLUMN_ID }}/cards \
+          --url https://api.github.com/graphql \
           --header 'Authorization: Bearer ${{ env.GITHUB_TOKEN }}' \
-          --header 'Accept: application/vnd.github.inertia-preview+json' \
           --header 'Content-Type: application/json' \
-          --data '{"content_id": ${{ github.event.issue.id }},"content_type": "Issue"}'
+          --data '{"query":"mutation { updateIssue(input: { id: \"${{ github.event.issue.node_id }}\", fieldId: \"カスタムフィールドID\", fieldValue: \"選択肢のID\" }) { issue { title } } }"}'
