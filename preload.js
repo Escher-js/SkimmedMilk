@@ -4,6 +4,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
+const { electron } = require('process');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     /* conctextBridge (ipcrenderer) */
@@ -94,3 +95,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     getGitignoreDefaults: () => gitignoreDefaults,
 });
+console.log(window.electronAPI)
