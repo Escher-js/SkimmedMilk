@@ -95,4 +95,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     getGitignoreDefaults: () => gitignoreDefaults,
 });
+
+contextBridge.exposeInMainWorld('electron', {
+    setGitConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
+    },
+});
 console.log(window.electronAPI)
