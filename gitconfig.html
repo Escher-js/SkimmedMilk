@@ -18,7 +18,6 @@
         <button type="submit">Submit</button>
     </form>
     <script>
-        const { ipcRenderer } = require('electron');
         const form = document.getElementById('git-config-form');
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -26,15 +25,16 @@
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
 
-            const result = await ipcRenderer.invoke('set-git-config', username, email);
+            const result = await window.electronAPI.setGitConfig(username, email); // ここを変更
             if (result === 'success') {
                 alert('Git configuration updated successfully.');
-                window.close(); // ウィンドウを閉じる
+                window.close();
             } else {
                 alert(`Error: ${result}`);
             }
         });
     </script>
+
 </body>
 
 </html>
