@@ -46,6 +46,7 @@ function runGitCommand(command) {
 
 app.whenReady().then(async () => {
     // ユーザー名とメールアドレスを取得
+    console.log("start")
     try {
         const [username, email] = await Promise.all([
             runGitCommand('git config --global user.name'),
