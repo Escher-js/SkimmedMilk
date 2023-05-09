@@ -293,21 +293,14 @@ window.electronAPI.on('selected-folder', (folderPath) => {
                 try {
                     const initResult = await window.electronAPI.execAsync(`git -C "${folderPath}" init`);
                     console.log(`Stdout: ${initResult}`);
-
                     gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
                     window.electronAPI.initgitignore(folderPath);
-
                     const mainBranchResult = await window.electronAPI.execAsync(`git -C "${folderPath}" checkout -b main`);
                     console.log(`Stdout: ${mainBranchResult}`);
-
-                    const commitResult = await commitChanges();
-                    console.log(`Stdout: ${commitResult}`);
-
+                    await commitChanges();
                     const updateBranchResult = await updateBranchList();
-                    console.log(`Stdout: ${updateBranchList}`);
-
-                    const commitListResult = await showCommitList();
-                    console.log(`Stdout: ${commitListResult}`);
+                    console.log(`Stdout: ${updateBranchResult}`);
+                    await showCommitList();
                 } catch (error) {
                     console.error(`Error: ${error.message}`);
                     return;
