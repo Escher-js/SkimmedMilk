@@ -101,4 +101,3 @@ contextBridge.exposeInMainWorld('electron', {
         return await ipcRenderer.invoke('set-git-config', username, email);
     },
 });
-console.log(window.electronAPI)

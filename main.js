@@ -49,7 +49,6 @@ function runGitCommand(command) {
 
 app.whenReady().then(async () => {
     createWindow();
-
     try {
         const [username, email] = await Promise.all([
             runGitCommand('git config --global user.name'),
@@ -69,7 +68,7 @@ app.whenReady().then(async () => {
             backgroundColor: '#ffffff',
             webPreferences: {
                 nodeIntegration: false,
-                contextIsolation: false,
+                contextIsolation: true,
                 preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
             },
         });
@@ -77,6 +76,7 @@ app.whenReady().then(async () => {
 
         win.loadFile('gitconfig.html');
     }
+
 });
 
 app.on('window-all-closed', () => {
