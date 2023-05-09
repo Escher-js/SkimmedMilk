@@ -66,7 +66,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
             });
         });
     },
-
+    setGitConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
+    },
 
     /* path */
     joinPath: (...paths) => {
