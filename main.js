@@ -2,8 +2,10 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 
+let mainWindow;
+
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
@@ -11,14 +13,15 @@ function createWindow() {
             contextIsolation: true,
             enableRemoteModule: true,
             preload: path.join(__dirname, 'preload.js'),
-        }
+        },
     });
     ipcMain.on('create-new-branch', (event, newBranchName) => {
-        console.error(newBranchName)
-        win.webContents.send('create-new-branch', newBranchName);
+        console.error(newBranchName);
+        mainWindow.webContents.send('create-new-branch', newBranchName);
     });
-    win.loadFile('index.html');
+    mainWindow.loadFile('index.html');
 }
+
 function createBranchInputDialog() {
     const inputDialog = new BrowserWindow({
         width: 400,
@@ -46,7 +49,8 @@ function runGitCommand(command) {
 
 app.whenReady().then(async () => {
     // ユーザー名とメールアドレスを取得
-    console.log("start")
+    createWindow();
+
     try {
         const [username, email] = await Promise.all([
             runGitCommand('git config --global user.name'),
@@ -66,8 +70,6 @@ app.whenReady().then(async () => {
             webPreferences: { nodeIntegration: true }
         });
         win.loadFile('gitconfig.html');
-    } finally {
-        createWindow();
     }
 });
 
