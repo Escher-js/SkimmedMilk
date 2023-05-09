@@ -1,4 +1,4 @@
-name: Add new issues to project
+name: Add Issue to Project
 
 on:
   issues:
@@ -8,13 +8,13 @@ jobs:
   add_issue_to_project:
     runs-on: ubuntu-latest
     steps:
-    - name: Add issue to project
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        curl --request POST \
-          --url https://api.github.com/repos/${{ github.repository }}/projects/columns/${{ secrets.PROJECT_COLUMN_ID }}/cards \
-          --header 'Authorization: Bearer ${{ env.GITHUB_TOKEN }}' \
-          --header 'Accept: application/vnd.github.inertia-preview+json' \
-          --header 'Content-Type: application/json' \
+      - name: Add issue to project
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_URL: https://api.github.com/projects/1
+        run: |
+          curl --request POST \
+          --url $PROJECT_URL/cards \
+          --header "Authorization: Bearer $GITHUB_TOKEN" \
+          --header "Content-Type: application/json" \
           --data '{"content_id": ${{ github.event.issue.id }},"content_type": "Issue"}'
