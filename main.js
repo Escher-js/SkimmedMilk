@@ -59,7 +59,11 @@ app.whenReady().then(async () => {
     } catch (error) {
         // 設定が不完全な場合、設定画面を表示
         const win = new BrowserWindow({
-            parent: mainWindow, modal: true, width: 400, height: 300, webPreferences: { nodeIntegration: true }
+            parent: mainWindow,
+            modal: true,
+            width: 400,
+            height: 300,
+            webPreferences: { nodeIntegration: true }
         });
         win.loadFile('gitconfig.html');
     } finally {
