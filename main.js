@@ -55,20 +55,6 @@ ipcMain.on('open-folder-dialog', (event) => {
         }
     });
 });
-ipcMain.on('open-file-dialog', (event) => {
-    const options = {
-        title: 'Select a file',
-        properties: ['openFile'],
-        filters: [{ name: 'Markdown', extensions: ['md'] }],
-    };
-
-    dialog.showOpenDialog(null, options).then((result) => {
-        if (!result.canceled) {
-            const filePath = result.filePaths[0];
-            event.sender.send('selected-file', filePath);
-        }
-    });
-});
 ipcMain.on('save-file-dialog', (event) => {
     const options = {
         title: 'Save file',

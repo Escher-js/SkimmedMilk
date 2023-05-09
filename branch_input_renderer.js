@@ -10,7 +10,7 @@ okBtn.addEventListener('click', () => {
         alert('Branch name cannot be empty');
         return;
     }
-    ipcRenderer.send('create-new-branch', newBranchName);
+    ipcRenderer.send('created-new-branch', newBranchName);
 
     window.close();
 });

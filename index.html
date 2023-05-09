@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta charset="UTF-8">
-    <title>Markdown Git Editor</title>
+    <title>Giant v0.3.0</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="./node_modules/diff2html/bundles/css/diff2html.min.css" />
 </head>
@@ -12,7 +12,6 @@
 <body>
 
     <h1>Hello, Electron!</h1>
-    <button id="file-btn">Open</button>
     <button id="save-btn">Save</button>
     <button id="git-init-btn">Open Folder</button>
     <span id="git-status" style="margin-left: 10px;"></span>
@@ -23,14 +22,15 @@
     </select>
     <br />
     <div id="main">
-        <textarea id="text-editor"></textarea>
+        <!-- <textarea id="text-editor"></textarea> -->
         <!-- 追加: コミット一覧を表示する右側ペイン -->
         <div id="commit-list-pane">
             <h3>Commit List</h3>
             <ul id="commit-list"></ul>
         </div>
+        <div id="diff-container"></div>
     </div>
-    <div id="diff-container"></div>
+
 
 
     <script src="renderer.js"></script>

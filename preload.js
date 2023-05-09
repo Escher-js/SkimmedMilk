@@ -5,6 +5,7 @@ const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
 
+console.log(gitignoreDefaults)
 
 contextBridge.exposeInMainWorld('electronAPI', {
     /* conctextBridge (ipcrenderer) */
@@ -39,25 +40,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
             });
         }
     },
-    readFile: (path, options, callback = null) => {
-        fs.readFile(path, options, callback);
-    },
-    readFileSync: (path, options) => {
-        return fs.readFileSync(path, options);
-    },
-    writeFileSync: (path, data, options) => {
-        fs.writeFileSync(path, data, options);
-    },
-    existsSync: (path) => {
-        return fs.existsSync(path);
-    },
+    readFile: (path, options, callback = null) => { fs.readFile(path, options, callback); },
+    readFileSync: (path, options) => { return fs.readFileSync(path, options); },
+    writeFileSync: (path, data, options) => { fs.writeFileSync(path, data, options); },
+    existsSync: (path) => { return fs.existsSync(path); },
+    rm: (path, options) => fs.promises.rm(path, options),
     promises: {
         readFile: (path, options, callback) => {
             fs.readFile(path, options, (error, data) => {
                 callback(error, data);
             });
         },
-        rm: (path, options) => fs.promises.rm(path, options),
     },
 
     /* exec */
