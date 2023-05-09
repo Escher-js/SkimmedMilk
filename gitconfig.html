@@ -19,7 +19,6 @@
     </form>
     <script>
         const { ipcRenderer } = require('electron');
-
         const form = document.getElementById('git-config-form');
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -30,7 +29,7 @@
             const result = await ipcRenderer.invoke('set-git-config', username, email);
             if (result === 'success') {
                 alert('Git configuration updated successfully.');
-                window.close();
+                window.close(); // ウィンドウを閉じる
             } else {
                 alert(`Error: ${result}`);
             }
