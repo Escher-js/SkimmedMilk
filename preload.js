@@ -1,11 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const { Diff2Html } = require('diff2html');
+const Diff2html = require('diff2html');
 const fs = require('fs');
 const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
 
-console.log(Diff2Html)
 
 contextBridge.exposeInMainWorld('electronAPI', {
     /* conctextBridge (ipcrenderer) */
@@ -29,10 +28,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     access: (path, callback) => {
         fs.access(path, fs.constants.F_OK, callback);
     },
-    writeFile: (path, data, callback) => {
-        fs.writeFile(path, data, callback);
+    writeFile: (path, data, callback = null) => {
+        if (callback) {
+            fs.writeFile(path, data, callback);
+        } else {
+            fs.writeFile(path, data, (error) => {
+                if (error) {
+                    console.error(`Error: ${error.message}`);
+                }
+            });
+        }
     },
-    readFile: (path, options, callback) => {
+    readFile: (path, options, callback = null) => {
         fs.readFile(path, options, callback);
     },
     readFileSync: (path, options) => {
@@ -64,27 +71,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     /* external library */
-    getDiff2HtmlVersion: getDiff2HtmlVersion,
-
-    getDiffHtml: async (diff) => {
-        return await new Promise((resolve) => {
-            console.log('Diff2Html:', Diff2Html);
-
-            const result = getPrettyHtml(diff, {
-                inputFormat: 'diff',
-                showFiles: false,
-                matching: 'lines',
-                outputFormat: 'side-by-side',
-            });
-            resolve(result);
-        });
+    getDiffHtml: (diff) => {
+        const diffJson = Diff2html.parse(diff);
+        const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
+        return diffHtml
     },
     getGitignoreDefaults: () => gitignoreDefaults,
 });
-
-function getDiff2HtmlVersion() {
-    const diff2HtmlPackagePath = path.dirname(require.resolve('diff2html'));
-    const packageJsonPath = path.join(diff2HtmlPackagePath, '..', 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    return packageJson.version;
-}

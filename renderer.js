@@ -37,10 +37,6 @@ async function loadBodyMd() {
     // body.mdファイルを読み込む
     await loadBodyMd();
     console.log(window.electronAPI)
-
-    // diff2html のバージョン番号を表示
-    // const diff2HtmlVersion = window.electronAPI.getDiff2HtmlVersion();
-    // console.log('diff2html version:', diff2HtmlVersion);
 })();
 
 
@@ -247,7 +243,6 @@ async function getCommitDiff(commitHash) {
 }
 
 async function showDiff(diff) {
-    console.log(window.electronAPI)
     const diffContainer = document.getElementById('diff-container');
 
     // 差分を HTML 形式に変換

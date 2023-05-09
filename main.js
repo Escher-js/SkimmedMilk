@@ -1,6 +1,12 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 
+const Diff2html = require('diff2html');
+const diffJson = Diff2html.parse('<Unified Diff String>');
+const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
+console.log(diffHtml);
+console.log(Diff2html)
+
 function createWindow() {
     const win = new BrowserWindow({
         width: 800,
