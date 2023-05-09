@@ -51,6 +51,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exec: (command, callback) => {
         exec(command, callback);
     },
+    execAsync: (command) => {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error && error.code !== 0) {
+                    console.error(`Error: ${error.message}`);
+                    reject(error);
+                    return;
+                }
+                if (stderr) {
+                    console.log(`Stderr: ${stderr}`);
+                }
+                resolve(stdout);
+            });
+        });
+    },
+
 
     /* path */
     joinPath: (...paths) => {
@@ -59,7 +75,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     /* gitignore */
     initgitignore: (folderPath) => {
-        fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults, (error) => {
+        fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults.defaultGitignoreContent, (error) => {
             if (error) {
                 console.error(`Error: ${error.message}`);
                 return;

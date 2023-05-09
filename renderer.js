@@ -63,46 +63,36 @@ async function saveFile() {
     await commitChanges()
     await showCommitList();
 }
-function updateBranchList() {
+async function updateBranchList() {
     const folderPath = folderPathSpan.textContent;
-    // ブランチの一覧を取得する
-    window.electronAPI.exec(`git -C "${folderPath}" branch`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error: ${error.message}`);
-            return;
+    const stdout = await window.electronAPI.execAsync(`git -C "${folderPath}" branch`);
+
+    const branches = stdout.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
+    console.log(branches);
+
+    // プルダウンメニューをクリア
+    branchSelect.innerHTML = '';
+
+    // 新しいオプションを追加する
+    branches.forEach(branch => {
+        const option = document.createElement('option');
+        option.value = branch.replace('*', '').trim();
+        option.textContent = option.value;
+
+        if (branch.startsWith('*')) {
+            option.selected = true;
         }
-        if (stderr) {
-            console.error(`Stderr: ${stderr}`);
-            return;
-        }
-        console.log(stdout)
-        const branches = stdout.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
-        // const currentBranch = branches.find(branch => branch.startsWith('*')).slice(1).trim();
-        console.log(branches)
-        // プルダウンメニューをクリア
-        branchSelect.innerHTML = '';
 
-        // 新しいオプションを追加する
-        branches.forEach(branch => {
-            const option = document.createElement('option');
-            option.value = branch.replace('*', '').trim();
-            option.textContent = option.value;
-
-            if (branch.startsWith('*')) {
-                option.selected = true;
-            }
-
-            branchSelect.appendChild(option);
-        });
-
-        // 'Create new branch' オプションを追加
-        const createNewBranchOption = document.createElement('option');
-        createNewBranchOption.value = 'create-new-branch';
-        createNewBranchOption.textContent = 'Create new branch';
-        branchSelect.appendChild(createNewBranchOption);
+        branchSelect.appendChild(option);
     });
 
+    // 'Create new branch' オプションを追加
+    const createNewBranchOption = document.createElement('option');
+    createNewBranchOption.value = 'create-new-branch';
+    createNewBranchOption.textContent = 'Create new branch';
+    branchSelect.appendChild(createNewBranchOption);
 }
+
 async function commitChanges() {
     const folderPath = folderPathSpan.textContent;
 
@@ -291,33 +281,35 @@ window.electronAPI.on('selected-folder', (folderPath) => {
     // フォルダパスを表示
     folderPathSpan.textContent = folderPath;
 
-    window.electronAPI.access(`${folderPath}/.git`, (err) => {
+    window.electronAPI.access(`${folderPath}/.git`, async (err) => {
         if (err) {
             // .gitフォルダが存在しない場合
             gitStatusSpan.innerHTML = '<span style="color: red;">&#11044;</span>';
 
             const gitInitConfirmed = confirm('This folder is not a git repository. Do you want to run "git init"?');
             if (gitInitConfirmed) {
-                window.electronAPI.exec(`git -C "${folderPath}" init`, (error, stdout, stderr) => {
-                    if (error && error.code !== 0) {
-                        console.error(`Error: ${error.message}`);
-                        return;
-                    }
-                    if (stderr) {
-                        console.log(`Stderr: ${stderr}`);
-                    }
-                    console.log(`Stdout: ${stdout}`);
-                    gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+                try {
+                    const initResult = await window.electronAPI.execAsync(`git -C "${folderPath}" init`);
+                    console.log(`Stdout: ${initResult}`);
 
-                    // .gitignoreファイルを作成して書き込む
-                    window.electronAPI.writeFile(`${folderPath}/.gitignore`, defaultGitignoreContent, (error) => {
-                        if (error) {
-                            console.error(`Error: ${error.message}`);
-                            return;
-                        }
-                        console.log('Created .gitignore file');
-                    });
-                });
+                    gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+                    window.electronAPI.initgitignore(folderPath);
+
+                    const mainBranchResult = await window.electronAPI.execAsync(`git -C "${folderPath}" checkout -b main`);
+                    console.log(`Stdout: ${mainBranchResult}`);
+
+                    const commitResult = await commitChanges();
+                    console.log(`Stdout: ${commitResult}`);
+
+                    const updateBranchResult = await updateBranchList();
+                    console.log(`Stdout: ${updateBranchList}`);
+
+                    const commitListResult = await showCommitList();
+                    console.log(`Stdout: ${commitListResult}`);
+                } catch (error) {
+                    console.error(`Error: ${error.message}`);
+                    return;
+                }
             }
         } else {
             // .gitフォルダが存在する場合
@@ -325,6 +317,7 @@ window.electronAPI.on('selected-folder', (folderPath) => {
         }
         updateBranchList(folderPath);
     });
+
 });
 window.electronAPI.on('created-new-branch', (newBranchName) => {
     const folderPath = folderPathSpan.textContent;
