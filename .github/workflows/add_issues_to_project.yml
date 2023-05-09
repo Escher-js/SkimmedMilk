@@ -9,9 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Add issue to project
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_URL: https://api.github.com/orgs/Escher-js/projects/1
         run: |
           curl --request POST \
-          --url https://api.github.com/projects/PROJECT_ID/cards \
-          --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          --url $PROJECT_URL/cards \
+          --header "Authorization: Bearer $GITHUB_TOKEN" \
           --header "Content-Type: application/json" \
           --data '{"content_id": ${{ github.event.issue.id }},"content_type": "Issue"}'
