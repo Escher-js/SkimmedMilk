@@ -69,7 +69,7 @@ app.whenReady().then(async () => {
             backgroundColor: '#ffffff',
             webPreferences: {
                 nodeIntegration: false,
-                contextIsolation: true,
+                contextIsolation: false,
                 preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
             },
         });
