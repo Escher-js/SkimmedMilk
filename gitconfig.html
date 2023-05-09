@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Git Configuration</title>
+</head>
+
+<body>
+    <h1>Git Configuration</h1>
+    <form id="git-config-form">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" />
+        <br />
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" />
+        <br />
+        <button type="submit">Submit</button>
+    </form>
+    <script>
+        console.log(window.electronAPI)
+        const form = document.getElementById('git-config-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+
+            const result = await window.electron.setGitConfig(username, email);
+            if (result === 'success') {
+                alert('Git configuration updated successfully.');
+                window.close();
+            } else {
+                alert(`Error: ${result}`);
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

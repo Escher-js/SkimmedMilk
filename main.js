@@ -1,23 +1,27 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { exec } = require('child_process');
+
+let mainWindow;
 
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
-            nodeIntegration: true,
+            nodeIntegration: false,
             contextIsolation: true,
             enableRemoteModule: true,
-            preload: path.join(__dirname, 'preload.js'),
-        }
+            preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
+        },
     });
     ipcMain.on('create-new-branch', (event, newBranchName) => {
-        console.error(newBranchName)
-        win.webContents.send('create-new-branch', newBranchName);
+        console.error(newBranchName);
+        mainWindow.webContents.send('create-new-branch', newBranchName);
     });
-    win.loadFile('index.html');
+    mainWindow.loadFile('index.html');
 }
+
 function createBranchInputDialog() {
     const inputDialog = new BrowserWindow({
         width: 400,
@@ -30,7 +34,50 @@ function createBranchInputDialog() {
 
     inputDialog.loadFile(path.join(__dirname, 'branch_input.html'));
 }
-app.whenReady().then(createWindow);
+// Gitコマンドを実行する関数
+function runGitCommand(command) {
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(stdout.trim());
+            }
+        });
+    });
+}
+
+app.whenReady().then(async () => {
+    createWindow();
+    try {
+        const [username, email] = await Promise.all([
+            runGitCommand('git config --global user.name'),
+            runGitCommand('git config --global user.email'),
+        ]);
+
+        if (!username || !email) {
+            throw new Error('Username or email not set');
+        }
+    } catch (error) {
+        // 設定が不完全な場合、設定画面を表示
+        const win = new BrowserWindow({
+            parent: mainWindow,
+            modal: true,
+            width: 400,
+            height: 300,
+            backgroundColor: '#ffffff',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
+            },
+        });
+
+
+        win.loadFile('gitconfig.html');
+    }
+
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -70,4 +117,15 @@ ipcMain.on('save-file-dialog', (event) => {
 });
 ipcMain.handle('show-branch-input-dialog', () => {
     createBranchInputDialog();
+});
+ipcMain.handle('set-git-config', async (event, username, email) => {
+    try {
+        await Promise.all([
+            runGitCommand(`git config --global user.name "${username}"`),
+            runGitCommand(`git config --global user.email "${email}"`),
+        ]);
+        return 'success';
+    } catch (error) {
+        return error.message;
+    }
 });

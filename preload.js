@@ -4,6 +4,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
+const { electron } = require('process');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     /* conctextBridge (ipcrenderer) */
@@ -66,7 +67,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
             });
         });
     },
-
+    setGitConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
+    },
 
     /* path */
     joinPath: (...paths) => {
@@ -91,4 +94,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return diffHtml
     },
     getGitignoreDefaults: () => gitignoreDefaults,
+});
+
+contextBridge.exposeInMainWorld('electron', {
+    setGitConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
+    },
 });

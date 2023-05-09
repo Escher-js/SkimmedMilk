@@ -6,6 +6,8 @@ const folderPathSpan = document.getElementById('folder-path');
 const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
+console.log(window.electronAPI)
+
 saveBtn.addEventListener('click', () => {
     commitChanges();
 });
