@@ -26,9 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     /* fs */
-    access: (path, callback) => {
-        fs.access(path, fs.constants.F_OK, callback);
-    },
+    access: (path, callback) => { fs.access(path, fs.constants.F_OK, callback); },
     writeFile: (path, data, callback = null) => {
         if (callback) {
             fs.writeFile(path, data, callback);
