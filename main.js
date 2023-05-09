@@ -9,10 +9,10 @@ function createWindow() {
         width: 800,
         height: 600,
         webPreferences: {
-            nodeIntegration: true,
+            nodeIntegration: false,
             contextIsolation: true,
             enableRemoteModule: true,
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
         },
     });
     ipcMain.on('create-new-branch', (event, newBranchName) => {
