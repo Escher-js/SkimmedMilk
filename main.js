@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { exec } = require('child_process');
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -30,7 +31,38 @@ function createBranchInputDialog() {
 
     inputDialog.loadFile(path.join(__dirname, 'branch_input.html'));
 }
-app.whenReady().then(createWindow);
+// Gitコマンドを実行する関数
+function runGitCommand(command) {
+    return new Promise((resolve, reject) => {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(stdout.trim());
+            }
+        });
+    });
+}
+
+app.whenReady().then(async () => {
+    // ユーザー名とメールアドレスを取得
+    try {
+        const [username, email] = await Promise.all([
+            runGitCommand('git config --global user.name'),
+            runGitCommand('git config --global user.email'),
+        ]);
+
+        if (!username || !email) {
+            throw new Error('Username or email not set');
+        }
+    } catch (error) {
+        // 設定が不完全な場合、設定画面を表示
+        const win = new BrowserWindow({ width: 400, height: 300, webPreferences: { nodeIntegration: true } });
+        win.loadFile('gitconfig.html');
+    } finally {
+        createWindow();
+    }
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -70,4 +102,15 @@ ipcMain.on('save-file-dialog', (event) => {
 });
 ipcMain.handle('show-branch-input-dialog', () => {
     createBranchInputDialog();
+});
+ipcMain.handle('set-git-config', async (event, username, email) => {
+    try {
+        await Promise.all([
+            runGitCommand(`git config --global user.name "${username}"`),
+            runGitCommand(`git config --global user.email "${email}"`),
+        ]);
+        return 'success';
+    } catch (error) {
+        return error.message;
+    }
 });
