@@ -5,8 +5,6 @@ const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
 
-console.log(gitignoreDefaults)
-
 contextBridge.exposeInMainWorld('electronAPI', {
     /* conctextBridge (ipcrenderer) */
     on: (channel, callback) => {
@@ -39,8 +37,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     readFile: (path, options, callback = null) => { fs.readFile(path, options, callback); },
-    readFileSync: (path, options) => { return fs.readFileSync(path, options); },
-    writeFileSync: (path, data, options) => { fs.writeFileSync(path, data, options); },
     existsSync: (path) => { return fs.existsSync(path); },
     rm: (path, options) => fs.promises.rm(path, options),
     promises: {
@@ -59,6 +55,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     /* path */
     joinPath: (...paths) => {
         return path.join(...paths);
+    },
+
+    /* gitignore */
+    initgitignore: (folderPath) => {
+        fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults, (error) => {
+            if (error) {
+                console.error(`Error: ${error.message}`);
+                return;
+            }
+            console.log('Created .gitignore file');
+        });
     },
 
     /* external library */
