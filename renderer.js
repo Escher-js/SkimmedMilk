@@ -147,7 +147,7 @@ function getParentFolderPath(path) {
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
     const parentPath = getParentFolderPath(folderPath)
-    const cloneFolderPath = window.electronAPI.joinPath(parentPath, 'temp-clone');
+    const cloneFolderPath = window.path.join(parentPath, 'temp-clone');
 
     // クローンフォルダが存在する場合は削除
     if (window.fs.existsSync(cloneFolderPath)) {

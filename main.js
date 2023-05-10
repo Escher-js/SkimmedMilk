@@ -24,21 +24,19 @@ function createWindow() {
 }
 function createBranchInputDialog() {
     if (newBranchWindow) {
-        newBranchWindw.focus();
+        newBranchWindow.close();
     }
-    else {
-        newBranchWindow = new BrowserWindow({
-            width: 400,
-            height: 200,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                enableRemoteModule: true,
-                preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
-            },
-        });
-        newBranchWindow.loadFile(path.join(__dirname, 'branch_input.html'));
-    }
+    newBranchWindow = new BrowserWindow({
+        width: 400,
+        height: 200,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            enableRemoteModule: true,
+            preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
+        },
+    });
+    newBranchWindow.loadFile(path.join(__dirname, 'branch_input.html'));
 }
 
 // Gitコマンドを実行する関数

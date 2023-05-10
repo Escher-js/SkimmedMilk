@@ -7,23 +7,12 @@ const path = require('path');
 // const { electron } = require('process');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    /* exec */
-    setGitConfig: async (username, email) => {
-        return await ipcRenderer.invoke('set-git-config', username, email);
-    },
-
-    /* path */
-    joinPath: (...paths) => {
-        return path.join(...paths);
-    },
-
     /* external library */
     getDiffHtml: (diff) => {
         const diffJson = Diff2html.parse(diff);
         const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
         return diffHtml
     },
-    getGitignoreDefaults: () => gitignoreDefaults,
 });
 contextBridge.exposeInMainWorld('exec', {
     exec: (command, callback) => {
@@ -43,6 +32,11 @@ contextBridge.exposeInMainWorld('exec', {
                 resolve(stdout);
             });
         });
+    },
+});
+contextBridge.exposeInMainWorld('path', {
+    join: (...paths) => {
+        return path.join(...paths);
     },
 });
 contextBridge.exposeInMainWorld('ipc', {
@@ -85,7 +79,6 @@ contextBridge.exposeInMainWorld('fs', {
     },
 });
 contextBridge.exposeInMainWorld('git', {
-    /* gitignore */
     initignore: (folderPath) => {
         fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults.defaultGitignoreContent, (error) => {
             if (error) {
@@ -94,6 +87,9 @@ contextBridge.exposeInMainWorld('git', {
             }
             console.log('Created .gitignore file');
         });
+    },
+    setConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
     },
 });
 contextBridge.exposeInMainWorld('electron', {
