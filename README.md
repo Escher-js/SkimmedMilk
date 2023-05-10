@@ -1,23 +1,47 @@
-# SkimmedMilk
-
-追加情報をありがとうございます。それでは、ご説明いただいた内容を元に、モジュール構成とデータの流れをまとめたmermaid記法での図示を作成します。
-
-```mermaid
-graph LR
-A(ユーザー) -- Hypoの入力 --> B(Hypo管理モジュール)
-B -- HypoとDependencyの関連付け --> C(Dependency管理モジュール)
-A -- Dependencyの入力（画像やフォルダ） --> C
-C -- gitを使ったバージョン管理 --> D(gitモジュール)
-C -- Dependency情報を表示 --> A
-B -- Hypo情報を表示 --> A
+# SkimmedMilk 要件定義
+package.jsonを参照のこと：
+```json
+{
+  "name": "skimmedmilk",
+  "version": "0.3.0",
+  "description": "Your app description",
+  "main": "main.js",
+  "author": "psmuler <zhmuler@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "build": {
+    "appId": "com.yourcompany.yourapp",
+    "productName": "skimmed-milk",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "files": [
+      "**/*"
+    ]
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-rpm": "^6.1.1",
+    "@electron-forge/maker-squirrel": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "electron": "^13.6.9"
+  },
+  "dependencies": {
+    "diff2html": "^3.4.35",
+    "electron-squirrel-startup": "^1.0.0"
+  }
+}
 ```
 
-この図では、以下のようなデータの流れが示されています。
+# 現在の実装
+関数呼び出しの関係
 
-1. ユーザーがHypoの入力を行い、Hypo管理モジュールがそれを受け取ります。
-2. ユーザーがDependencyの入力（画像やフォルダ）を行い、Dependency管理モジュールがそれを受け取ります。
-3. Hypo管理モジュールがHypoとDependencyの関連付けを行い、Dependency管理モジュールに情報を渡します。
-4. Dependency管理モジュールがgitモジュールを使ってバージョン管理を行います。
-5. Dependency管理モジュールとHypo管理モジュールがそれぞれの情報をユーザーに表示します。
 
-この図がアプリの概要とモジュール構成、モジュール間のデータの流れを正確に表しているかどうか、ご確認いただけますか？ 何か修正が必要な点があればお知らせください。
+# その他の注意点
+electron v12以降の
