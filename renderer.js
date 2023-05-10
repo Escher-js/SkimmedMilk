@@ -97,17 +97,17 @@ async function updateBranchList() {
 
 async function commitChanges() {
     const folderPath = folderPathSpan.textContent;
-
+    console.log(`folderPath: ${folderPath}`)
     // git status を実行して変更を検出
     const gitStatus = await new Promise((resolve, reject) => {
         window.electronAPI.exec(`git -C "${folderPath}" status --porcelain`, (error, stdout, stderr) => {
-            if (error) {
+            if (error && error.code !== 0) {
+                console.error(`Stderr: ${error}`);
                 reject(`Error: ${error.message}`);
                 return;
             }
             if (stderr) {
-                reject(`Stderr: ${stderr}`);
-                return;
+                console.log(`Stderr: ${stderr}`);
             }
             resolve(stdout);
         });
@@ -120,13 +120,12 @@ async function commitChanges() {
         window.electronAPI.exec(
             `git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`,
             (error, stdout, stderr) => {
-                if (error) {
+                if (error && error.code !== 0) {
                     console.error(`Error: ${error.message}`);
                     return;
                 }
                 if (stderr) {
-                    console.error(`Stderr: ${stderr}`);
-                    return;
+                    console.log(`Stderr: ${stderr}`);
                 }
                 console.log(`Commit successful: ${stdout}`);
             }
