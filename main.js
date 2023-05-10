@@ -104,19 +104,6 @@ ipcMain.on('open-folder-dialog', (event) => {
         }
     });
 });
-ipcMain.on('save-file-dialog', (event) => {
-    const options = {
-        title: 'Save file',
-        filters: [{ name: 'Markdown', extensions: ['md'] }],
-    };
-
-    dialog.showSaveDialog(null, options).then((result) => {
-        if (!result.canceled) {
-            const savePath = result.filePath;
-            event.sender.send('selected-save-path', savePath);
-        }
-    });
-});
 ipcMain.on('created-new-branch', (event, newBranchName) => {
     console.log(newBranchName);
     if (mainWindow) {

@@ -15,9 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 });
 contextBridge.exposeInMainWorld('exec', {
-    exec: (command, callback) => {
-        return exec(command, callback);
-    },
     async: (command) => {
         return new Promise((resolve, reject) => {
             exec(command, (error, stdout, stderr) => {
