@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 
 let mainWindow;
+let newBranchWindow;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -15,25 +16,31 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
         },
     });
-    ipcMain.on('create-new-branch', (event, newBranchName) => {
-        console.error(newBranchName);
-        mainWindow.webContents.send('create-new-branch', newBranchName);
-    });
+    // ipcMain.on('create-new-branch', (event, newBranchName) => {
+    //     console.error(newBranchName);
+    //     mainWindow.webContents.send('create-new-branch', newBranchName);
+    // });
     mainWindow.loadFile('index.html');
 }
-
 function createBranchInputDialog() {
-    const inputDialog = new BrowserWindow({
-        width: 400,
-        height: 200,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-        },
-    });
-
-    inputDialog.loadFile(path.join(__dirname, 'branch_input.html'));
+    if (newBranchWindow) {
+        newBranchWindw.focus();
+    }
+    else {
+        newBranchWindow = new BrowserWindow({
+            width: 400,
+            height: 200,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                enableRemoteModule: true,
+                preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
+            },
+        });
+        newBranchWindow.loadFile(path.join(__dirname, 'branch_input.html'));
+    }
 }
+
 // Gitコマンドを実行する関数
 function runGitCommand(command) {
     return new Promise((resolve, reject) => {
@@ -72,11 +79,8 @@ app.whenReady().then(async () => {
                 preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
             },
         });
-
-
         win.loadFile('gitconfig.html');
     }
-
 });
 
 app.on('window-all-closed', () => {
@@ -114,6 +118,12 @@ ipcMain.on('save-file-dialog', (event) => {
             event.sender.send('selected-save-path', savePath);
         }
     });
+});
+ipcMain.on('created-new-branch', (event, newBranchName) => {
+    console.log(newBranchName);
+    if (mainWindow) {
+        mainWindow.webContents.send('created-new-branch', newBranchName);
+    }
 });
 ipcMain.handle('show-branch-input-dialog', () => {
     createBranchInputDialog();

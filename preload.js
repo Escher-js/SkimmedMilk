@@ -4,27 +4,63 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
-const { electron } = require('process');
+// const { electron } = require('process');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    /* conctextBridge (ipcrenderer) */
-    on: (channel, callback) => {
-        return ipcRenderer.on(channel, (_, ...args) => callback(...args));
+    /* exec */
+    setGitConfig: async (username, email) => {
+        return await ipcRenderer.invoke('set-git-config', username, email);
     },
-    once: (channel, callback) => {
-        return ipcRenderer.once(channel, (_, ...args) => callback(...args));
+
+    /* path */
+    joinPath: (...paths) => {
+        return path.join(...paths);
     },
-    removeListener: (channel, callback) => {
-        ipcRenderer.removeListener(channel, (_, ...args) => callback(...args));
+
+    /* external library */
+    getDiffHtml: (diff) => {
+        const diffJson = Diff2html.parse(diff);
+        const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
+        return diffHtml
     },
+    getGitignoreDefaults: () => gitignoreDefaults,
+});
+contextBridge.exposeInMainWorld('exec', {
+    exec: (command, callback) => {
+        return exec(command, callback);
+    },
+    async: (command) => {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error && error.code !== 0) {
+                    console.error(`Error: ${error.message}`);
+                    reject(error);
+                    return;
+                }
+                if (stderr) {
+                    console.log(`Stderr: ${stderr}`);
+                }
+                resolve(stdout);
+            });
+        });
+    },
+});
+contextBridge.exposeInMainWorld('ipc', {
+
     send: (channel, ...args) => {
         return ipcRenderer.send(channel, ...args);
     },
     invoke: (channel, ...args) => {
         return ipcRenderer.invoke(channel, ...args);
     },
-
-    /* fs */
+    on: (channel, callback) => {
+        return ipcRenderer.on(channel, (_, ...args) => callback(...args));
+    },
+    once: (channel, callback) => {
+        return ipcRenderer.once(channel, (_, ...args) => callback(...args));
+    },
+});
+contextBridge.exposeInMainWorld('fs', {
     access: (path, callback) => { fs.access(path, fs.constants.F_OK, callback); },
     writeFile: (path, data, callback = null) => {
         if (callback) {
@@ -47,37 +83,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
             });
         },
     },
-
-    /* exec */
-    exec: (command, callback) => {
-        exec(command, callback);
-    },
-    execAsync: (command) => {
-        return new Promise((resolve, reject) => {
-            exec(command, (error, stdout, stderr) => {
-                if (error && error.code !== 0) {
-                    console.error(`Error: ${error.message}`);
-                    reject(error);
-                    return;
-                }
-                if (stderr) {
-                    console.log(`Stderr: ${stderr}`);
-                }
-                resolve(stdout);
-            });
-        });
-    },
-    setGitConfig: async (username, email) => {
-        return await ipcRenderer.invoke('set-git-config', username, email);
-    },
-
-    /* path */
-    joinPath: (...paths) => {
-        return path.join(...paths);
-    },
-
+});
+contextBridge.exposeInMainWorld('git', {
     /* gitignore */
-    initgitignore: (folderPath) => {
+    initignore: (folderPath) => {
         fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults.defaultGitignoreContent, (error) => {
             if (error) {
                 console.error(`Error: ${error.message}`);
@@ -86,16 +95,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
             console.log('Created .gitignore file');
         });
     },
-
-    /* external library */
-    getDiffHtml: (diff) => {
-        const diffJson = Diff2html.parse(diff);
-        const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
-        return diffHtml
-    },
-    getGitignoreDefaults: () => gitignoreDefaults,
 });
-
 contextBridge.exposeInMainWorld('electron', {
     setGitConfig: async (username, email) => {
         return await ipcRenderer.invoke('set-git-config', username, email);

@@ -6,13 +6,11 @@ const folderPathSpan = document.getElementById('folder-path');
 const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
-console.log(window.electronAPI)
-
 saveBtn.addEventListener('click', () => {
     commitChanges();
 });
 gitInitBtn.addEventListener('click', () => {
-    window.electronAPI.send('open-folder-dialog');
+    window.ipc.send('open-folder-dialog');
 });
 branchSelect.addEventListener('change', async () => {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
@@ -22,35 +20,21 @@ branchSelect.addEventListener('change', async () => {
         // show-branch-input-dialogを待機するPromiseを定義
         const waitForBranchInputDialog = async () => {
             return new Promise((resolve) => {
-                window.electronAPI.once('branch-input-dialog-closed', () => {
+                window.ipc.once('branch-input-dialog-closed', () => {
                     resolve();
                 });
             });
         };
-
+        window.ipc.once('branch-input-dialog-closed');
         // ダイアログが閉じるのを待つ
-        await window.electronAPI.invoke('show-branch-input-dialog');
+        await window.ipc.invoke('show-branch-input-dialog');
         await waitForBranchInputDialog();
-
-        // ブランチリストを更新
-        await updateBranchList();
-        return;
     }
+
     // 選択されたブランチにチェックアウト
-    await new Promise((resolve, reject) => {
-        window.electronAPI.exec(`git -C "${folderPath}" checkout "${selectedBranch}"`, (error, stdout, stderr) => {
-            if (error && error.code !== 0) {
-                console.error(`Error: ${error.message}`);
-                reject(error);
-                return;
-            }
-            if (stderr) {
-                console.error(`Stderr: ${stderr}`);
-            }
-            console.log(`Branch switched: ${stdout}`);
-            resolve();
-        });
-    });
+    const changeBranchResult = await window.exec.async(`git -C "${folderPath}" checkout "${selectedBranch}"`)
+    console.log(`Branch switched: ${changeBranchResult}`);
+    await updateBranchList();
     await showCommitList();
 });
 window.addEventListener('beforeunload', async (event) => {
@@ -60,16 +44,15 @@ window.addEventListener('beforeunload', async (event) => {
         await showCommitList();
     }
 });
-
 async function saveFile() {
     await commitChanges()
     await showCommitList();
 }
 async function updateBranchList() {
     const folderPath = folderPathSpan.textContent;
-    const stdout = await window.electronAPI.execAsync(`git -C "${folderPath}" branch`);
+    const branchList = await window.exec.async(`git -C "${folderPath}" branch`);
 
-    const branches = stdout.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
+    const branches = branchList.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
     console.log(branches);
 
     // プルダウンメニューをクリア
@@ -99,37 +82,14 @@ async function commitChanges() {
     const folderPath = folderPathSpan.textContent;
     console.log(`folderPath: ${folderPath}`)
     // git status を実行して変更を検出
-    const gitStatus = await new Promise((resolve, reject) => {
-        window.electronAPI.exec(`git -C "${folderPath}" status --porcelain`, (error, stdout, stderr) => {
-            if (error && error.code !== 0) {
-                console.error(`Stderr: ${error}`);
-                reject(`Error: ${error.message}`);
-                return;
-            }
-            if (stderr) {
-                console.log(`Stderr: ${stderr}`);
-            }
-            resolve(stdout);
-        });
-    });
+    const gitStatus = await window.exec.async(`git -C "${folderPath}" status --porcelain`)
+    console.log(gitStatus)
 
     // 変更がある場合のみコミット
     if (gitStatus.trim() !== '') {
         const commitMessage = `Auto-commit on ${new Date().toLocaleString()}`;
-
-        window.electronAPI.exec(
-            `git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`,
-            (error, stdout, stderr) => {
-                if (error && error.code !== 0) {
-                    console.error(`Error: ${error.message}`);
-                    return;
-                }
-                if (stderr) {
-                    console.log(`Stderr: ${stderr}`);
-                }
-                console.log(`Commit successful: ${stdout}`);
-            }
-        );
+        const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`)
+        console.log(`Commit successful: ${commitResult}`);
     } else {
         console.log('No changes detected');
     }
@@ -168,21 +128,9 @@ async function getCommitList() {
         return;
     }
 
-    const commitLogOutput = await new Promise((resolve, reject) => {
-        window.electronAPI.exec(`git -C "${folderPath}" log --pretty=format:"%h - %s" ${selectedBranch}`, (error, stdout, stderr) => {
-            if (error && error.code !== 0) {
-                console.error(`Error: ${error.message}`);
-                reject(error);
-                return;
-            }
-            if (stderr) {
-                console.error(`Stderr: ${stderr}`);
-            }
-            resolve(stdout);
-        });
-    });
+    const commitLogOutput = await window.exec.async(`git -C "${folderPath}" log --pretty=format:"%h - %s" ${selectedBranch}`)
+    console.log(commitLogOutput)
     return commitLogOutput.split('\n');
-
 }
 function getParentFolderPath(path) {
     // パスの最後の区切り文字（/または\）を見つけます。
@@ -202,13 +150,13 @@ async function showSelectedCommit(commitHash) {
     const cloneFolderPath = window.electronAPI.joinPath(parentPath, 'temp-clone');
 
     // クローンフォルダが存在する場合は削除
-    if (window.electronAPI.existsSync(cloneFolderPath)) {
-        await window.electronAPI.rm(cloneFolderPath, { recursive: true, force: true });
+    if (window.fs.existsSync(cloneFolderPath)) {
+        await window.fs.rm(cloneFolderPath, { recursive: true, force: true });
     }
 
     // クローンを作成
     await new Promise((resolve, reject) => {
-        window.electronAPI.exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
+        window.exec.exec(`git -C "${folderPath}" clone . "${cloneFolderPath}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
@@ -224,7 +172,7 @@ async function showSelectedCommit(commitHash) {
 
     // 選択したコミットまで戻す
     await new Promise((resolve, reject) => {
-        window.electronAPI.exec(`git -C "${cloneFolderPath}" checkout "${commitHash}"`, (error, stdout, stderr) => {
+        window.exec.exec(`git -C "${cloneFolderPath}" checkout "${commitHash}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
@@ -243,7 +191,7 @@ async function getCommitDiff(commitHash) {
 
     return new Promise((resolve, reject) => {
         console.log(commitHash)
-        window.electronAPI.exec(`git -C "${folderPath}" show "${commitHash}"`, (error, stdout, stderr) => {
+        window.exec.exec(`git -C "${folderPath}" show "${commitHash}"`, (error, stdout, stderr) => {
             if (error && error.code !== 0) {
                 console.error(`Error: ${error.message}`);
                 reject(error);
@@ -266,8 +214,8 @@ async function showDiff(diff) {
     diffContainer.innerHTML = htmlDiff;
 }
 
-window.electronAPI.on('selected-file', (filePath) => {
-    window.electronAPI.readFile(filePath, (err, data) => {
+window.ipc.on('selected-file', (filePath) => {
+    window.fs.readFile(filePath, (err, data) => {
         if (err) {
             console.error(err);
             return;
@@ -275,35 +223,29 @@ window.electronAPI.on('selected-file', (filePath) => {
         textEditor.value = data;
     });
 });
-window.electronAPI.on('selected-save-path', (savePath) => {
+window.ipc.on('selected-save-path', (savePath) => {
     saveFile(savePath);
 });
-window.electronAPI.on('selected-folder', (folderPath) => {
+window.ipc.on('selected-folder', (folderPath) => {
     // フォルダパスを表示
     folderPathSpan.textContent = folderPath;
 
-    window.electronAPI.access(`${folderPath}/.git`, async (err) => {
+    window.fs.access(`${folderPath}/.git`, async (err) => {
         if (err) {
             // .gitフォルダが存在しない場合
             gitStatusSpan.innerHTML = '<span style="color: red;">&#11044;</span>';
 
             const gitInitConfirmed = confirm('This folder is not a git repository. Do you want to run "git init"?');
             if (gitInitConfirmed) {
-                try {
-                    const initResult = await window.electronAPI.execAsync(`git -C "${folderPath}" init`);
-                    console.log(`Stdout: ${initResult}`);
-                    gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
-                    window.electronAPI.initgitignore(folderPath);
-                    const mainBranchResult = await window.electronAPI.execAsync(`git -C "${folderPath}" checkout -b main`);
-                    console.log(`Stdout: ${mainBranchResult}`);
-                    await commitChanges();
-                    const updateBranchResult = await updateBranchList();
-                    console.log(`Stdout: ${updateBranchResult}`);
-                    await showCommitList();
-                } catch (error) {
-                    console.error(`Error: ${error.message}`);
-                    return;
-                }
+                const initResult = await window.exec.async(`git -C "${folderPath}" init`);
+                console.log(`gitinit: ${initResult}`);
+                gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+                window.git.initignore(folderPath);
+                const mainBranchResult = await window.exec.async(`git -C "${folderPath}" checkout -b main`);
+                console.log(`checkedout to main: ${mainBranchResult}`);
+                await commitChanges();
+                await updateBranchList();
+                await showCommitList();
             }
         } else {
             // .gitフォルダが存在する場合
@@ -313,9 +255,10 @@ window.electronAPI.on('selected-folder', (folderPath) => {
     });
 
 });
-window.electronAPI.on('created-new-branch', (newBranchName) => {
+window.ipc.on('created-new-branch', (newBranchName) => {
     const folderPath = folderPathSpan.textContent;
-    window.electronAPI.exec(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`, (error, stdout, stderr) => {
+    console.log("entered");
+    window.exec.exec(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error: ${error.message}`);
             return;
