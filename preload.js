@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('path', {
     join: (...paths) => {
         return path.join(...paths);
     },
+    dirname: (path) => {
+        return path.dirname(path);
+    },
 });
 contextBridge.exposeInMainWorld('ipc', {
 

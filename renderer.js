@@ -132,21 +132,9 @@ async function getCommitList() {
     console.log(commitLogOutput)
     return commitLogOutput.split('\n');
 }
-function getParentFolderPath(path) {
-    // パスの最後の区切り文字（/または\）を見つけます。
-    const lastSeparatorIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-
-    if (lastSeparatorIndex === -1) {
-        // 区切り文字が見つからない場合、親フォルダが存在しないとみなします。
-        return null;
-    }
-
-    // 区切り文字までの部分文字列を取得し、親フォルダのパスを返します。
-    return path.substring(0, lastSeparatorIndex);
-}
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
-    const parentPath = getParentFolderPath(folderPath)
+    const parentPath = window.path.dirname(folderPath);
     const cloneFolderPath = window.path.join(parentPath, 'temp-clone');
 
     // クローンフォルダが存在する場合は削除
