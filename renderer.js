@@ -6,7 +6,6 @@ const folderPathSpan = document.getElementById('folder-path');
 const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
-let checkout = false;
 
 saveBtn.addEventListener('click', async () => {
     await commitChanges('you saved')
@@ -77,25 +76,19 @@ async function updateBranchList() {
     branchSelect.appendChild(createNewBranchOption);
 }
 async function commitChanges(message) {
-    if (!checkout) {
-        checkout = true;
-        const folderPath = folderPathSpan.textContent;
-        console.log(`folderPath: ${folderPath}`)
-        // git status を実行して変更を検出
-        const gitStatus = await window.exec.async(`git -C "${folderPath}" status --porcelain`)
-        console.log(gitStatus)
+    const folderPath = folderPathSpan.textContent;
+    console.log(`folderPath: ${folderPath}`)
+    // git status を実行して変更を検出
+    const gitStatus = await window.exec.async(`git -C "${folderPath}" status --porcelain`)
+    console.log(gitStatus)
 
-        // 変更がある場合のみコミット
-        if (gitStatus.trim() !== '') {
-            const commitMessage = `${message} on ${new Date().toLocaleString()}`;
-            const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`)
-            checkout = false
-            console.log(`Commit successful: ${commitResult}`);
-        } else {
-            console.log('No changes detected');
-        }
+    // 変更がある場合のみコミット
+    if (gitStatus.trim() !== '') {
+        const commitMessage = `${message} on ${new Date().toLocaleString()}`;
+        const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`)
+        console.log(`Commit successful: ${commitResult}`);
     } else {
-        console.log("git is now busy.");
+        console.log('No changes detected');
     }
 }
 async function showCommitList() {
