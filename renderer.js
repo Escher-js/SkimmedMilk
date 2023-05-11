@@ -77,24 +77,23 @@ async function updateBranchList() {
 }
 async function commitChanges(message) {
     const folderPath = folderPathSpan.textContent;
-    console.log(`folderPath: ${folderPath}`)
     // git status を実行して変更を検出
     const gitStatus = await window.exec.async(`git -C "${folderPath}" status --porcelain`)
-    console.log(gitStatus)
 
     // 変更がある場合のみコミット
     if (gitStatus.trim() !== '') {
         const commitMessage = `${message} on ${new Date().toLocaleString()}`;
         const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`)
         console.log(`Commit successful: ${commitResult}`);
+        return commitResult
     } else {
         console.log('No changes detected');
+        return null;
     }
 }
 async function showCommitList() {
     // コミットリストを取得
     const commitLines = await getCommitList();
-    console.log(`commitLines:${commitLines}`);
     // コミットリストを表示
     const commitListContainer = document.getElementById('commit-list');
     commitListContainer.innerHTML = '';
@@ -121,7 +120,7 @@ async function getCommitList() {
     const folderPath = folderPathSpan.textContent;
 
     if (!folderPath || selectedBranch === 'create-new-branch') {
-        console.log('selected branch is "create new branch"');
+        console.log(`selected branch is ${selectedBranch}`);
         return;
     }
 
@@ -164,6 +163,7 @@ async function showDiff(diff) {
 window.ipc.on('selected-folder', (folderPath) => {
     // フォルダパスを表示
     folderPathSpan.textContent = folderPath;
+    console.log(folderPath)
 
     window.fs.access(`${folderPath}/.git`, async (err) => {
         if (err) {
@@ -174,21 +174,21 @@ window.ipc.on('selected-folder', (folderPath) => {
             if (gitInitConfirmed) {
                 const initResult = await window.exec.async(`git -C "${folderPath}" init`);
                 console.log(`gitinit: ${initResult}`);
-                gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
                 window.git.initignore(folderPath);
                 const mainBranchResult = await window.exec.async(`git -C "${folderPath}" checkout -b main`);
                 console.log(`checkedout to main: ${mainBranchResult}`);
-                console.log("1")
                 await commitChanges();
+                gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
             }
         } else {
             // .gitフォルダが存在する場合
             gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
         }
-        console.log("2")
+
         await updateBranchList(folderPath);
-        console.log("3")
+        console.log("-----commit log----")
         await showCommitList();
+        console.log("-------------------")
     });
 });
 window.ipc.on('created-new-branch', (newBranchName) => {
@@ -201,6 +201,8 @@ window.ipc.on('created-new-branch', (newBranchName) => {
 });
 
 setInterval(async () => {
-    await commitChanges('Auto-updated')
-    await showCommitList();
+    const commitResult = await commitChanges('Auto-updated')
+    if (commitResult !== null) {
+        showCommitList();
+    }
 }, 60 * 1000);

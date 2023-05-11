@@ -16,10 +16,6 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'), // preloadスクリプトのパスを追加
         },
     });
-    // ipcMain.on('create-new-branch', (event, newBranchName) => {
-    //     console.error(newBranchName);
-    //     mainWindow.webContents.send('create-new-branch', newBranchName);
-    // });
     mainWindow.loadFile('index.html');
 }
 function createBranchInputDialog() {
