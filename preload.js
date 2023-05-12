@@ -4,7 +4,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
-// const { electron } = require('process');
+const os = require('os');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     /* external library */
@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const diffJson = Diff2html.parse(diff);
         const diffHtml = Diff2html.html(diffJson, { drawFileList: true });
         return diffHtml
+    },
+    tmpdir: () => {
+        return os.tmpdir();
     },
 });
 contextBridge.exposeInMainWorld('exec', {
@@ -27,6 +30,27 @@ contextBridge.exposeInMainWorld('exec', {
                     resolve(`Stderr: ${stderr}`);
                 }
                 resolve(stdout);
+            });
+        });
+    },
+    out: (command, outputPath) => {
+        return new Promise((resolve, reject) => {
+            exec(`${command} > "${outputPath}"`, (error, stdout, stderr) => {
+                if (error && error.code !== 0) {
+                    console.error(`Error: ${error.message}`);
+                    reject(error);
+                    return;
+                }
+                if (stderr) {
+                    console.error(`Stderr: ${stderr}`);
+                }
+                fs.readFile(outputPath, 'utf8', (err, data) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve(data);
+                });
             });
         });
     },

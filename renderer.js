@@ -199,18 +199,33 @@ async function showSelectedCommit(commitHash) {
 
 async function getCommitDiff(commitHash) {
     const folderPath = folderPathSpan.textContent;
-    const commitHashListResult = await window.exec.do(`git -C "${folderPath}" show "${commitHash}" | head -n 100`)
-    return commitHashListResult;
+    const outputPath = window.path.join(window.electronAPI.tmpdir(), `${commitHash}-output.txt`);
+    try {
+        const commitHashListResult = await window.exec.out(`git -C "${folderPath}" show "${commitHash}"`, outputPath);
+        return { output: commitHashListResult, path: outputPath };
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+    }
 }
-async function showDiff(diff) {
+
+async function showDiff(diffData) {
     const diffContainer = document.getElementById('diff-container');
 
-    // 差分を HTML 形式に変換
-    const htmlDiff = await window.electronAPI.getDiffHtml(diff);
+    try {
+        // 差分を HTML 形式に変換
+        const htmlDiff = await window.electronAPI.getDiffHtml(diffData.output);
 
-    // 変更点を横に並べて表示
-    diffContainer.innerHTML = htmlDiff;
+        // 変更点を横に並べて表示
+        diffContainer.innerHTML = htmlDiff;
+
+        // HTMLへの反映が終わった後に一時ファイルを削除
+        await window.fs.rm(diffData.path);
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+    }
 }
+
+
 
 window.ipc.on('selected-folder', (folderPath) => {
     // フォルダパスを表示
