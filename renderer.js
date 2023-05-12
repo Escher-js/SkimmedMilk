@@ -7,9 +7,11 @@ const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
 
-saveBtn.addEventListener('click', async () => {
-    await commitChanges('you saved')
-    await showCommitList();
+saveBtn.addEventListener('click', () => {
+    const folderPath = folderPathSpan.textContent;
+    const timestamp = Date.now(); // Get current timestamp in seconds
+    window.exec.async(`git -C "${folderPath}" tag marked=${timestamp}`)
+    showCommitList()
 });
 gitInitBtn.addEventListener('click', () => {
     window.ipc.send('open-folder-dialog');
@@ -46,6 +48,7 @@ window.addEventListener('beforeunload', async (event) => {
         await showCommitList();
     }
 });
+
 async function updateBranchList() {
     const folderPath = folderPathSpan.textContent;
     const branchList = await window.exec.async(`git -C "${folderPath}" branch`);
@@ -82,8 +85,7 @@ async function commitChanges(message) {
 
     // 変更がある場合のみコミット
     if (gitStatus.trim() !== '') {
-        const commitMessage = `${message} on ${new Date().toLocaleString()}`;
-        const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${commitMessage}"`)
+        const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${message}"`)
         console.log(`Commit successful: ${commitResult}`);
         return commitResult
     } else {
@@ -92,30 +94,6 @@ async function commitChanges(message) {
     }
 }
 async function showCommitList() {
-    // コミットリストを取得
-    const commitLines = await getCommitList();
-    // コミットリストを表示
-    const commitListContainer = document.getElementById('commit-list');
-    commitListContainer.innerHTML = '';
-
-    commitLines.forEach((commit) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = commit;
-        listItem.addEventListener('click', () => {
-            const commitHash = commit.split(' ')[0];
-            showSelectedCommit(commitHash);
-        });
-        // マウスオーバー時に差分を表示するイベントリスナーを追加
-        listItem.addEventListener('mouseover', async () => {
-            const commitHash = commit.split(' ')[0];
-            const diff = await getCommitDiff(commitHash);
-            showDiff(diff);
-        });
-        commitListContainer.appendChild(listItem);
-    });
-
-}
-async function getCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
 
@@ -124,9 +102,62 @@ async function getCommitList() {
         return;
     }
 
-    const commitLogOutput = await window.exec.async(`git -C "${folderPath}" log --pretty=format:"%h - %s" ${selectedBranch}`)
-    console.log(`commitLogOutput:${commitLogOutput}`)
-    return commitLogOutput.split('\n');
+    const options = '--pretty=format:"%cd - %h - %s %d" --decorate=short'
+    const commitLogOutput = await window.exec.async(`git -C "${folderPath}" log ${options} ${selectedBranch}`);
+    console.log(`${commitLogOutput}`);
+    const commitLines = commitLogOutput.split('\n');
+
+    const commitListContainer = document.getElementById('commit-list');
+
+    // Clear the commit list container and set it up as a table
+    commitListContainer.innerHTML = '';
+    commitListContainer.style.display = 'table';
+
+    commitLines.forEach((commit) => {
+        const tableRow = document.createElement('tr'); // Each commit will be a table row
+        const [date, hash, rest] = commit.split(' - ');
+        const dateObj = new Date(date);
+
+        const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+        const timeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        // Extract and format the message and tag information
+        const messageMatch = rest.match(/(.*)(?=\s\()/);
+        const message = messageMatch ? messageMatch[0] : rest;
+        const tagMatch = rest.match(/\((.*?)\)/);
+        const tags = tagMatch ? tagMatch[1].split(', ').filter(tag => tag.includes('tag: ')).join(', ') : "";
+        const marked = tags.includes('marked');
+
+        // If the commit is marked, add a small red circle to a separate cell
+        const markerCell = document.createElement('td');
+        if (marked) {
+            markerCell.style.color = 'red';
+            markerCell.textContent = '●';
+        }
+        tableRow.appendChild(markerCell);
+
+        const commitCell = document.createElement('td');
+        const textNode = document.createTextNode(`${hash} - ${message} (${dateStr}, ${timeStr})`);
+        commitCell.appendChild(textNode);
+        tableRow.appendChild(commitCell);
+
+        tableRow.addEventListener('click', () => {
+            const commitHash = hash;
+            showSelectedCommit(commitHash);
+        });
+
+        // Add event listener to show diff on mouseover
+        tableRow.addEventListener('mouseover', async () => {
+            const commitHash = hash;
+            const diff = await getCommitDiff(commitHash);
+            showDiff(diff);
+        });
+
+        commitListContainer.appendChild(tableRow);
+    });
+
+
+
 }
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
@@ -147,7 +178,6 @@ async function showSelectedCommit(commitHash) {
 async function getCommitDiff(commitHash) {
     const folderPath = folderPathSpan.textContent;
     const commitHashListResult = await window.exec.async(`git -C "${folderPath}" show "${commitHash}" | head -n 100`)
-    console.log(commitHashListResult)
     return commitHashListResult;
 }
 async function showDiff(diff) {

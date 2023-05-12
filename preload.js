@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('exec', {
                     return;
                 }
                 if (stderr) {
-                    console.log(`Stderr: ${stderr}`);
+                    resolve(`Stderr: ${stderr}`);
                 }
                 resolve(stdout);
             });

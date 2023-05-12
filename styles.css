@@ -13,7 +13,7 @@
 
 
 #commit-list-pane {
-    width: 300px;
+    width: 50vw;
     padding: 1rem;
     border-left: 1px solid #ccc;
 }
@@ -22,4 +22,8 @@
     list-style-type: none;
     padding: 0;
     margin: 0;
+}
+
+#diff-container {
+    width: 50vw;
 }
