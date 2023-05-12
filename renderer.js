@@ -10,7 +10,7 @@ const branchSelect = document.getElementById('branch-select');
 saveBtn.addEventListener('click', () => {
     const folderPath = folderPathSpan.textContent;
     const timestamp = Date.now(); // Get current timestamp in seconds
-    window.exec.async(`git -C "${folderPath}" tag marked=${timestamp}`)
+    window.exec.do(`git -C "${folderPath}" tag marked=${timestamp}`)
     showCommitList()
 });
 gitInitBtn.addEventListener('click', () => {
@@ -36,10 +36,7 @@ branchSelect.addEventListener('change', async () => {
     }
 
     // 選択されたブランチにチェックアウト
-    const changeBranchResult = await window.exec.async(`git -C "${folderPath}" checkout "${selectedBranch}"`)
-    console.log(`Branch switched: ${changeBranchResult}`);
-    await updateBranchList();
-    await showCommitList();
+    changeBranch(selectedBranch);
 });
 window.addEventListener('beforeunload', async (event) => {
     const folderPath = folderPathSpan.textContent;
@@ -48,10 +45,17 @@ window.addEventListener('beforeunload', async (event) => {
         await showCommitList();
     }
 });
-
+async function changeBranch(selectedBranch) {
+    const folderPath = folderPathSpan.textContent;
+    const changeBranchResult = await window.exec.do(`git -C "${folderPath}" checkout "${selectedBranch}"`)
+    console.log(`Branch switched: ${changeBranchResult}`);
+    await updateBranchList();
+    await showCommitList();
+}
 async function updateBranchList() {
     const folderPath = folderPathSpan.textContent;
-    const branchList = await window.exec.async(`git -C "${folderPath}" branch`);
+    const branchList = await window.exec.do(`git -C "${folderPath}" branch`);
+    console.log(branchList);
 
     const branches = branchList.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
     console.log(branches);
@@ -81,11 +85,11 @@ async function updateBranchList() {
 async function commitChanges(message) {
     const folderPath = folderPathSpan.textContent;
     // git status を実行して変更を検出
-    const gitStatus = await window.exec.async(`git -C "${folderPath}" status --porcelain`)
+    const gitStatus = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
 
     // 変更がある場合のみコミット
     if (gitStatus.trim() !== '') {
-        const commitResult = await window.exec.async(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${message}"`)
+        const commitResult = await window.exec.do(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${message}"`)
         console.log(`Commit successful: ${commitResult}`);
         return commitResult
     } else {
@@ -103,7 +107,7 @@ async function showCommitList() {
     }
 
     const options = '--pretty=format:"%cd - %h - %s %d" --decorate=short'
-    const commitLogOutput = await window.exec.async(`git -C "${folderPath}" log ${options} ${selectedBranch}`);
+    const commitLogOutput = await window.exec.do(`git -C "${folderPath}" log ${options} ${selectedBranch}`);
     console.log(`${commitLogOutput}`);
     const commitLines = commitLogOutput.split('\n');
 
@@ -137,7 +141,8 @@ async function showCommitList() {
         tableRow.appendChild(markerCell);
 
         const commitCell = document.createElement('td');
-        const textNode = document.createTextNode(`${hash} - ${message} (${dateStr}, ${timeStr})`);
+        const textNode = document.createTextNode(`${hash} - ${dateStr}, ${timeStr}`);
+        // const textNode = document.createTextNode(`${hash} - ${message} (${dateStr}, ${timeStr})`);
         commitCell.appendChild(textNode);
         tableRow.appendChild(commitCell);
 
@@ -155,29 +160,46 @@ async function showCommitList() {
 
         commitListContainer.appendChild(tableRow);
     });
-
-
-
 }
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
+    console.log(folderPath)
     const parentPath = window.path.dirname(folderPath);
     const cloneFolderPath = window.path.join(parentPath, 'temp-clone');
+    const branchName = `branch-${commitHash}`;  // 新しいブランチ名。適切な名前に変更してください。
 
-    // クローンフォルダが存在する場合は削除
+    // クローンフォルダが存在する場合は更新
     if (window.fs.existsSync(cloneFolderPath)) {
-        await window.fs.rm(cloneFolderPath, { recursive: true, force: true });
+        const fetchResult = await window.exec.do(`git -C "${cloneFolderPath}" fetch`)
+        console.log(`Fetched updates for backup repository: ${fetchResult}`);
+    } else {
+        // クローンを作成
+        const cloneResult = await window.exec.do(`git -C "${folderPath}" clone . "${cloneFolderPath}"`)
+        console.log(`Cloned repository for backup: ${cloneResult}`);
     }
-    // クローンを作成
-    const cloneResult = await window.exec.async(`git -C "${folderPath}" clone . "${cloneFolderPath}"`)
-    console.log(`Cloned repository: ${cloneResult}`);
-    // 選択したコミットまで戻す
-    const commitResetResult = await window.exec.async(`git -C "${cloneFolderPath}" checkout "${commitHash}"`)
-    console.log(`Checked out commit: ${commitResetResult}`);
+
+    // ブランチが存在するかどうか確認
+    const checkoutbranch = await window.exec.do(`git -C "${folderPath}" branch --list ${branchName}`)
+    const branchExists = (checkoutbranch.trim() === branchName);
+
+    if (branchExists) {
+        // ブランチが存在する場合はそのブランチにチェックアウト
+        const checkoutResult = await window.exec.do(`git -C "${folderPath}" checkout "${branchName}"`)
+        console.log(`Checked out existing branch: ${checkoutResult}`);
+        await updateBranchList();
+        await showCommitList();
+    } else {
+        // 新しいブランチを作成して選択したコミットまで戻す
+        const checkoutResult = await window.exec.do(`git -C "${folderPath}" checkout -b "${branchName}" "${commitHash}"`)
+        console.log(`Checked out commit on new branch: ${checkoutResult}`);
+        await updateBranchList();
+        await showCommitList();
+    }
 }
+
 async function getCommitDiff(commitHash) {
     const folderPath = folderPathSpan.textContent;
-    const commitHashListResult = await window.exec.async(`git -C "${folderPath}" show "${commitHash}" | head -n 100`)
+    const commitHashListResult = await window.exec.do(`git -C "${folderPath}" show "${commitHash}" | head -n 100`)
     return commitHashListResult;
 }
 async function showDiff(diff) {
@@ -202,10 +224,10 @@ window.ipc.on('selected-folder', (folderPath) => {
 
             const gitInitConfirmed = confirm('This folder is not a git repository. Do you want to run "git init"?');
             if (gitInitConfirmed) {
-                const initResult = await window.exec.async(`git -C "${folderPath}" init`);
+                const initResult = await window.exec.do(`git -C "${folderPath}" init`);
                 console.log(`gitinit: ${initResult}`);
                 window.git.initignore(folderPath);
-                const mainBranchResult = await window.exec.async(`git -C "${folderPath}" checkout -b main`);
+                const mainBranchResult = await window.exec.do(`git -C "${folderPath}" checkout -b main`);
                 console.log(`checkedout to main: ${mainBranchResult}`);
                 await commitChanges();
                 gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
@@ -224,7 +246,7 @@ window.ipc.on('selected-folder', (folderPath) => {
 window.ipc.on('created-new-branch', (newBranchName) => {
     const folderPath = folderPathSpan.textContent;
     console.log("entered");
-    const promise1 = window.exec.async(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`)
+    const promise1 = window.exec.do(`git -C "${folderPath}" checkout -b "${newBranchName.trim()}"`)
     promise1.then(() => {
         updateBranchList(folderPath);
     })
@@ -235,4 +257,4 @@ setInterval(async () => {
     if (commitResult !== null) {
         showCommitList();
     }
-}, 60 * 1000);
+}, 30 * 1000);

@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 });
 contextBridge.exposeInMainWorld('exec', {
-    async: (command) => {
+    do: (command) => {
         return new Promise((resolve, reject) => {
             exec(command, (error, stdout, stderr) => {
                 if (error && error.code !== 0) {
@@ -35,8 +35,9 @@ contextBridge.exposeInMainWorld('path', {
     join: (...paths) => {
         return path.join(...paths);
     },
-    dirname: (path) => {
-        return path.dirname(path);
+    dirname: (paths) => {
+        console.log(path)
+        return path.dirname(paths);
     },
 });
 contextBridge.exposeInMainWorld('ipc', {
