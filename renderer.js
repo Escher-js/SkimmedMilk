@@ -164,23 +164,11 @@ async function showCommitList() {
 async function showSelectedCommit(commitHash) {
     const folderPath = folderPathSpan.textContent;
     console.log(folderPath)
-    const parentPath = window.path.dirname(folderPath);
-    const cloneFolderPath = window.path.join(parentPath, 'temp-clone');
     const branchName = `branch-${commitHash}`;  // 新しいブランチ名。適切な名前に変更してください。
-
-    // クローンフォルダが存在する場合は更新
-    if (window.fs.existsSync(cloneFolderPath)) {
-        const fetchResult = await window.exec.do(`git -C "${cloneFolderPath}" fetch`)
-        console.log(`Fetched updates for backup repository: ${fetchResult}`);
-    } else {
-        // クローンを作成
-        const cloneResult = await window.exec.do(`git -C "${folderPath}" clone . "${cloneFolderPath}"`)
-        console.log(`Cloned repository for backup: ${cloneResult}`);
-    }
-
     // ブランチが存在するかどうか確認
     const checkoutbranch = await window.exec.do(`git -C "${folderPath}" branch --list ${branchName}`)
-    const branchExists = (checkoutbranch.trim() === branchName);
+    const branchExists = (checkoutbranch.replace('*', '').trim() === branchName);
+    console.log(checkoutbranch, branchExists)
 
     if (branchExists) {
         // ブランチが存在する場合はそのブランチにチェックアウト
@@ -189,7 +177,19 @@ async function showSelectedCommit(commitHash) {
         await updateBranchList();
         await showCommitList();
     } else {
-        // 新しいブランチを作成して選択したコミットまで戻す
+        // クローンフォルダが存在する場合は更新
+        const parentPath = window.path.dirname(folderPath);
+        const cloneFolderPath = window.path.join(parentPath, 'temp-clone');
+        if (window.fs.existsSync(cloneFolderPath)) {
+            const fetchResult = await window.exec.do(`git -C "${cloneFolderPath}" fetch`)
+            console.log(`Fetched updates for backup repository: ${fetchResult}`);
+        } else {
+            // クローンを作成
+            const cloneResult = await window.exec.do(`git -C "${folderPath}" clone . "${cloneFolderPath}"`)
+            console.log(`Cloned repository for backup: ${cloneResult}`);
+        }
+
+        // 新しいブランチを作成して選択したコミットまで戻す   
         const checkoutResult = await window.exec.do(`git -C "${folderPath}" checkout -b "${branchName}" "${commitHash}"`)
         console.log(`Checked out commit on new branch: ${checkoutResult}`);
         await updateBranchList();

@@ -1,4 +1,5 @@
 # SkimmedMilk 要件定義
+[設定](/package.json)
 package.jsonを参照のこと：
 ```json
 {
