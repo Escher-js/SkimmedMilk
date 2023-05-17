@@ -117,6 +117,7 @@ async function showCommitList() {
     commitListContainer.innerHTML = '';
     commitListContainer.style.display = 'table';
 
+    commitLines.pop() //最初のコミットを非表示にする
     commitLines.forEach((commit) => {
         const tableRow = document.createElement('tr'); // Each commit will be a table row
         const [date, hash, rest] = commit.split(' - ');
@@ -146,13 +147,13 @@ async function showCommitList() {
         commitCell.appendChild(textNode);
         tableRow.appendChild(commitCell);
 
-        tableRow.addEventListener('click', () => {
+        tableRow.addEventListener('dbclick', () => {
             const commitHash = hash;
             showSelectedCommit(commitHash);
         });
 
         // Add event listener to show diff on mouseover
-        tableRow.addEventListener('mouseover', async () => {
+        tableRow.addEventListener('click', async () => {
             const commitHash = hash;
             const diff = await getCommitDiff(commitHash);
             showDiff(diff);
