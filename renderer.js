@@ -6,6 +6,7 @@ const folderPathSpan = document.getElementById('folder-path');
 const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
+let busy = false;
 
 saveBtn.addEventListener('click', () => {
     const folderPath = folderPathSpan.textContent;
@@ -86,42 +87,71 @@ async function updateBranchList() {
 function escapePath(filePath) {
     return filePath.replace(/ /g, '\\ ');
 }
+function unescapeFromGit(s) {
+    return s.replace(/^"|"$/g, '').replace(/\\"/g, '"').replace(/\\n/g, '\n');
+}
 
 async function commitChanges(message) {
     const folderPath = folderPathSpan.textContent;
-    // git status を実行して変更を検出
-    const gitStatusOutput = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
-    const changes = gitStatusOutput.split('\n').filter(line => line.trim() !== '')
+    if (folderPath.trim() === '') return null;
+    if (busy === false) {
+        busy = true
+        console.log(folderPath)
+        // git status を実行して変更を検出
+        const gitStatusOutput = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
+        const changes = gitStatusOutput.split('\n').filter(line => line.trim() !== '')
+        console.log(changes)
+        // 変更がある場合のみコミット
+        if (changes.length > 0) {
+            const lfsFiles = [];
+            for (const change of changes) {
+                console.log(change)
+                if (change.trim().startsWith("D")) { continue }
+                const relativeFilePath = change.replace(/^.+?\s+/, '');
+                if (relativeFilePath.startsWith(".")) { continue }
+                let filePath;
 
-    // 変更がある場合のみコミット
-    if (changes.length > 0) {
-        for (const change of changes) {
-            console.log(change)
-            const relativeFilePath = change.replace(/^.+?\s+/, '');
-            if (relativeFilePath.startsWith(".")) { continue }
-            const filePath = window.path.join(folderPath, relativeFilePath);
-            const escapedFilePath = window.shellEscape.escape(filePath);
-            const fileSizeInBytes = window.fs.statSyncSize(filePath);
-            const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+                // 変更がリネーム（'R'）の場合、新旧のファイル名が ' -> ' で分割されている
+                if (change.startsWith('R')) {
+                    const renameParts = relativeFilePath.split(' -> ');
+                    // 新しいファイル名を取得
+                    relativeFilePath = renameParts[1];
+                }
 
-            // ファイルサイズが1MB以上なら git lfsで add
-            if (fileSizeInMegabytes > 1) {
-                await window.exec.do(`git lfs track ${escapedFilePath}`);
-                await window.exec.do(`git -C "${folderPath}" add ${escapedFilePath}`);
-            } else {
-                await window.exec.do(`git -C "${folderPath}" add ${escapedFilePath}`);
+                filePath = path.join(folderPath, unescapeFromGit(relativeFilePath));
+                const escapedFilePath = window.shellEscape.escape(filePath);
+                const fileSizeInBytes = window.fs.statSyncSize(filePath);
+                const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+
+                // ファイルサイズが1MB以上なら git lfsで追跡リストに追加
+                if (fileSizeInMegabytes > 1) {
+                    lfsFiles.push(escapedFilePath);
+                }
             }
-        }
 
-        // まとめてコミット
-        const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
-        console.log(`Commit successful: ${commitResult}`);
-        return commitResult;
+            // LFSで追跡すべきファイルをgit lfs trackで追加
+            for (const file of lfsFiles) {
+                await window.exec.do(`git -C "${folderPath}" lfs track ${file}`);
+            }
+
+            // すべての変更をadd
+            await window.exec.do(`git -C "${folderPath}" add . --verbose`);
+
+            // まとめてコミット
+            const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
+            console.log(`Commit successful: ${commitResult}`);
+            busy = false
+            return commitResult;
+        } else {
+            console.log('No changes detected');
+            busy = false
+            return null;
+        }
     } else {
-        console.log('No changes detected');
         return null;
     }
 }
+
 
 
 async function showCommitList() {
