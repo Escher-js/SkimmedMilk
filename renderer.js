@@ -7,6 +7,7 @@ const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
 let busy = false;
+// フォルダを再帰的に走査する関数
 
 saveBtn.addEventListener('click', () => {
     const folderPath = folderPathSpan.textContent;
@@ -90,7 +91,6 @@ function escapePath(filePath) {
 function unescapeFromGit(s) {
     return s.replace(/^"|"$/g, '').replace(/\\"/g, '"').replace(/\\n/g, '\n');
 }
-
 async function commitChanges(message) {
     const folderPath = folderPathSpan.textContent;
     if (folderPath.trim() === '') return null;
@@ -103,39 +103,39 @@ async function commitChanges(message) {
         console.log(changes)
         // 変更がある場合のみコミット
         if (changes.length > 0) {
-            const lfsFiles = [];
-            for (const change of changes) {
-                console.log(change)
-                if (change.trim().startsWith("D")) { continue }
-                const relativeFilePath = change.replace(/^.+?\s+/, '');
-                if (relativeFilePath.startsWith(".")) { continue }
-                let filePath;
+            // const lfsFiles = [];
+            // for (const change of changes) {
+            //     console.log(change)
+            //     if (change.trim().startsWith("D")) { continue }
+            //     const relativeFilePath = change.replace(/^.+?\s+/, '');
+            //     if (relativeFilePath.startsWith(".")) { continue }
+            //     let filePath;
 
-                // 変更がリネーム（'R'）の場合、新旧のファイル名が ' -> ' で分割されている
-                if (change.startsWith('R')) {
-                    const renameParts = relativeFilePath.split(' -> ');
-                    // 新しいファイル名を取得
-                    relativeFilePath = renameParts[1];
-                }
+            //     // 変更がリネーム（'R'）の場合、新旧のファイル名が ' -> ' で分割されている
+            //     if (change.startsWith('R')) {
+            //         const renameParts = relativeFilePath.split(' -> ');
+            //         // 新しいファイル名を取得
+            //         relativeFilePath = renameParts[1];
+            //     }
 
-                filePath = path.join(folderPath, unescapeFromGit(relativeFilePath));
-                const escapedFilePath = window.shellEscape.escape(filePath);
-                const fileSizeInBytes = window.fs.statSyncSize(filePath);
-                const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+            //     filePath = path.join(folderPath, unescapeFromGit(relativeFilePath));
+            //     const escapedFilePath = window.shellEscape.escape(filePath);
+            //     const fileSizeInBytes = window.fs.statSyncSize(filePath);
+            //     const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
 
-                // ファイルサイズが1MB以上なら git lfsで追跡リストに追加
-                if (fileSizeInMegabytes > 1) {
-                    lfsFiles.push(escapedFilePath);
-                }
-            }
+            //     // ファイルサイズが1MB以上なら git lfsで追跡リストに追加
+            //     if (fileSizeInMegabytes > 1) {
+            //         lfsFiles.push(escapedFilePath);
+            //     }
+            // }
 
-            // LFSで追跡すべきファイルをgit lfs trackで追加
-            for (const file of lfsFiles) {
-                await window.exec.do(`git -C "${folderPath}" lfs track ${file}`);
-            }
+            // // LFSで追跡すべきファイルをgit lfs trackで追加
+            // for (const file of lfsFiles) {
+            //     await window.exec.do(`git -C "${folderPath}" lfs track ${file}`);
+            // }
 
             // すべての変更をadd
-            await window.exec.do(`git -C "${folderPath}" add . --verbose`);
+            await window.exec.do(`git -C "${folderPath}" add .`);
 
             // まとめてコミット
             const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
@@ -148,12 +148,10 @@ async function commitChanges(message) {
             return null;
         }
     } else {
+        console.log("git is busy")
         return null;
     }
 }
-
-
-
 async function showCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
@@ -174,6 +172,7 @@ async function showCommitList() {
     commitListContainer.innerHTML = '';
     commitListContainer.style.display = 'table';
 
+    commitLines.pop()
     commitLines.forEach((commit) => {
         const tableRow = document.createElement('tr'); // Each commit will be a table row
         const [date, hash, rest] = commit.split(' - ');
@@ -212,6 +211,7 @@ async function showCommitList() {
         tableRow.addEventListener('click', async () => {
             const commitHash = hash;
             const diff = await getCommitDiff(commitHash);
+            console.log(diff)
             showDiff(diff);
         });
 
@@ -256,13 +256,18 @@ async function showSelectedCommit(commitHash) {
 async function getCommitDiff(commitHash) {
     const folderPath = folderPathSpan.textContent;
     const outputPath = window.path.join(window.electronAPI.tmpdir(), `${commitHash}-output.txt`);
+    console.log(outputPath);
     try {
-        const commitHashListResult = await window.exec.out(`git -C "${folderPath}" show "${commitHash}"`, outputPath);
-        return { output: commitHashListResult, path: outputPath };
+        // `git diff` コマンドを用いて前のコミットとの差分を取得
+        const commitHashListResult = await window.exec.out(`git -C "${folderPath}" diff "${commitHash}"~1 "${commitHash}"`, outputPath);
+        console.log(commitHashListResult)
+        const unescapedOutput = unescapeFromGit(commitHashListResult);
+        return { output: unescapedOutput, path: outputPath };
     } catch (error) {
         console.error(`Error: ${error.message}`);
     }
 }
+
 async function showDiff(diffData) {
     const diffContainer = document.getElementById('diff-container');
 
@@ -280,8 +285,6 @@ async function showDiff(diffData) {
     }
 }
 
-
-
 window.ipc.on('selected-folder', (folderPath) => {
     // フォルダパスを表示
     folderPathSpan.textContent = folderPath;
@@ -294,11 +297,23 @@ window.ipc.on('selected-folder', (folderPath) => {
 
             const gitInitConfirmed = confirm('This folder is not a git repository. Do you want to run "git init"?');
             if (gitInitConfirmed) {
+                busy = true;
                 const initResult = await window.exec.do(`git -C "${folderPath}" init`);
                 console.log(`gitinit: ${initResult}`);
                 window.git.initignore(folderPath);
+                // フォルダ内のすべてのファイルを走査して、1MB以上のファイルをリストアップ
+                const lfsFiles = await window.electronAPI.scanFolder(folderPath);
+                console.log(lfsFiles)
+                // LFSで追跡すべきファイルをgit lfs trackで追加
+                for (const file of lfsFiles) {
+                    const escapedFilePath = window.shellEscape.escape(file);
+                    console.log(escapedFilePath)
+                    await window.exec.do(`git -C "${folderPath}" lfs track ${escapedFilePath}`);
+                }
+
                 const mainBranchResult = await window.exec.do(`git -C "${folderPath}" checkout -b main`);
                 console.log(`checkedout to main: ${mainBranchResult}`);
+                busy = false;
                 await commitChanges();
                 gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
             }

@@ -6,6 +6,27 @@ const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
 const os = require('os');
 
+async function scanFolder(folderPath) {
+    let filesToTrack = [];
+    const files = fs.readdirSync(folderPath);
+
+    for (const file of files) {
+        const absolutePath = path.join(folderPath, file);
+        const fileStat = fs.statSync(absolutePath);
+
+        if (fileStat.isDirectory()) {
+            const innerFiles = await scanFolder(absolutePath);
+            filesToTrack = filesToTrack.concat(innerFiles);
+        } else {
+            const fileSizeInBytes = fileStat.size;
+            const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+            if (fileSizeInMegabytes > 1) {
+                filesToTrack.push(absolutePath);
+            }
+        }
+    }
+    return filesToTrack;
+}
 contextBridge.exposeInMainWorld('electronAPI', {
     /* external library */
     getDiffHtml: (diff) => {
@@ -16,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     tmpdir: () => {
         return os.tmpdir();
     },
+    scanFolder: scanFolder
+
 });
 contextBridge.exposeInMainWorld('exec', {
     do: (command) => {
@@ -100,8 +123,11 @@ contextBridge.exposeInMainWorld('fs', {
             });
         }
     },
-    statSyncSize: (filePath) => {
-        return fs.statSync(filePath).size;
+    statSync: (filePath) => {
+        return fs.statSync(filePath);
+    },
+    readdirSync: (path) => {
+        return fs.readdirSync(path)
     },
     readFile: (path, options, callback = null) => { fs.readFile(path, options, callback); },
     existsSync: (path) => { return fs.existsSync(path); },
