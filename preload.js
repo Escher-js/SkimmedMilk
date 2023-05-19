@@ -63,6 +63,9 @@ contextBridge.exposeInMainWorld('path', {
         console.log(path)
         return path.dirname(paths);
     },
+    parse: (paths) => {
+        return path.parse(paths)
+    }
 });
 contextBridge.exposeInMainWorld('ipc', {
 
