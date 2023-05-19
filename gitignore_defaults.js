@@ -3,6 +3,7 @@
 const defaultGitignoreContent = `
 .DS_Store
 *.exe
+*.zip
 *.App
 `;
 

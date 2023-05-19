@@ -41,6 +41,7 @@
     "electron": "^13.6.9"
   },
   "dependencies": {
+    "any-shell-escape": "^0.1.1",
     "diff2html": "^3.4.35",
     "electron-squirrel-startup": "^1.0.0"
   }

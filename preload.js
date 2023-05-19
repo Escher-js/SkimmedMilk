@@ -79,6 +79,14 @@ contextBridge.exposeInMainWorld('ipc', {
         return ipcRenderer.once(channel, (_, ...args) => callback(...args));
     },
 });
+const anyShellEscape = require('any-shell-escape');
+
+contextBridge.exposeInMainWorld('shellEscape', {
+    escape: (filePath) => {
+        return anyShellEscape([filePath]);
+    }
+});
+
 contextBridge.exposeInMainWorld('fs', {
     access: (path, callback) => { fs.access(path, fs.constants.F_OK, callback); },
     writeFile: (path, data, callback = null) => {
@@ -91,6 +99,9 @@ contextBridge.exposeInMainWorld('fs', {
                 }
             });
         }
+    },
+    statSyncSize: (filePath) => {
+        return fs.statSync(filePath).size;
     },
     readFile: (path, options, callback = null) => { fs.readFile(path, options, callback); },
     existsSync: (path) => { return fs.existsSync(path); },

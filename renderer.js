@@ -38,6 +38,7 @@ branchSelect.addEventListener('change', async () => {
     // 選択されたブランチにチェックアウト
     changeBranch(selectedBranch);
 });
+
 window.addEventListener('beforeunload', async (event) => {
     const folderPath = folderPathSpan.textContent;
     if (folderPath) {
@@ -82,21 +83,46 @@ async function updateBranchList() {
     createNewBranchOption.textContent = 'Create new branch';
     branchSelect.appendChild(createNewBranchOption);
 }
+function escapePath(filePath) {
+    return filePath.replace(/ /g, '\\ ');
+}
+
 async function commitChanges(message) {
     const folderPath = folderPathSpan.textContent;
     // git status を実行して変更を検出
-    const gitStatus = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
+    const gitStatusOutput = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
+    const changes = gitStatusOutput.split('\n').filter(line => line.trim() !== '')
 
     // 変更がある場合のみコミット
-    if (gitStatus.trim() !== '') {
-        const commitResult = await window.exec.do(`git -C "${folderPath}" add . && git -C "${folderPath}" commit -m "${message}"`)
+    if (changes.length > 0) {
+        for (const change of changes) {
+            console.log(change)
+            if (change.startsWith(".")) { continue }
+            const filePath = window.path.join(folderPath, change.substring(3));
+            const escapedFilePath = window.shellEscape.escape(filePath);
+            const fileSizeInBytes = window.fs.statSyncSize(filePath);
+            const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+
+            // ファイルサイズが1MB以上なら git lfsで add
+            if (fileSizeInMegabytes > 1) {
+                await window.exec.do(`git lfs track ${escapedFilePath}`);
+                await window.exec.do(`git -C "${folderPath}" add ${escapedFilePath}`);
+            } else {
+                await window.exec.do(`git -C "${folderPath}" add ${escapedFilePath}`);
+            }
+        }
+
+        // まとめてコミット
+        const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
         console.log(`Commit successful: ${commitResult}`);
-        return commitResult
+        return commitResult;
     } else {
         console.log('No changes detected');
         return null;
     }
 }
+
+
 async function showCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
@@ -117,7 +143,6 @@ async function showCommitList() {
     commitListContainer.innerHTML = '';
     commitListContainer.style.display = 'table';
 
-    commitLines.pop() //最初のコミットを非表示にする
     commitLines.forEach((commit) => {
         const tableRow = document.createElement('tr'); // Each commit will be a table row
         const [date, hash, rest] = commit.split(' - ');
@@ -197,7 +222,6 @@ async function showSelectedCommit(commitHash) {
         await showCommitList();
     }
 }
-
 async function getCommitDiff(commitHash) {
     const folderPath = folderPathSpan.textContent;
     const outputPath = window.path.join(window.electronAPI.tmpdir(), `${commitHash}-output.txt`);
@@ -208,7 +232,6 @@ async function getCommitDiff(commitHash) {
         console.error(`Error: ${error.message}`);
     }
 }
-
 async function showDiff(diffData) {
     const diffContainer = document.getElementById('diff-container');
 
@@ -273,4 +296,4 @@ setInterval(async () => {
     if (commitResult !== null) {
         showCommitList();
     }
-}, 30 * 1000);
+}, 10 * 1000);
