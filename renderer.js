@@ -97,8 +97,9 @@ async function commitChanges(message) {
     if (changes.length > 0) {
         for (const change of changes) {
             console.log(change)
-            if (change.startsWith(".")) { continue }
-            const filePath = window.path.join(folderPath, change.substring(3));
+            const relativeFilePath = change.replace(/^.+?\s+/, '');
+            if (relativeFilePath.startsWith(".")) { continue }
+            const filePath = window.path.join(folderPath, relativeFilePath);
             const escapedFilePath = window.shellEscape.escape(filePath);
             const fileSizeInBytes = window.fs.statSyncSize(filePath);
             const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
