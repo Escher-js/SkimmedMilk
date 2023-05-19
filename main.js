@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const path = require('path');
-const { exec } = require('child_process');
+// const { exec } = require('child_process');
+const fs = require('fs')
+const path = require('path')
+const util = require('util')
+const exec = util.promisify(require('child_process').exec)
 
 let mainWindow;
 let newBranchWindow;
@@ -48,6 +51,33 @@ function runGitCommand(command) {
     });
 }
 
+async function commitChanges(event, message, folderPath) {
+    const gitStatusOutput = (await exec(`git -C "${folderPath}" status --porcelain`)).stdout
+    const changes = gitStatusOutput.split('\n').filter(line => line.trim() !== '')
+
+    if (changes.length > 0) {
+        for (const change of changes) {
+            const filePath = path.join(folderPath, change.substring(3));
+            const fileSizeInBytes = fs.statSync(filePath).size;
+            const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
+
+            if (fileSizeInMegabytes > 1) {
+                await exec(`git lfs track "${filePath}"`);
+                await exec(`git -C "${folderPath}" add "${filePath}"`);
+            } else {
+                await exec(`git -C "${folderPath}" add "${filePath}"`);
+            }
+        }
+
+        const commitResult = (await exec(`git -C "${folderPath}" commit -m "${message}"`)).stdout
+        event.reply('commitChanges-reply', commitResult);
+    } else {
+        event.reply('commitChanges-reply', 'No changes detected');
+    }
+}
+
+
+
 app.whenReady().then(async () => {
     createWindow();
     try {
@@ -77,6 +107,8 @@ app.whenReady().then(async () => {
     }
 });
 
+ipcMain.on('commitChanges', commitChanges)
+
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
@@ -87,18 +119,30 @@ app.on('activate', () => {
         createWindow();
     }
 });
-ipcMain.on('open-folder-dialog', (event) => {
+ipcMain.on('open-folder-dialog', async (event) => {
     const options = {
         title: 'Select a folder',
         properties: ['openDirectory'],
     };
 
-    dialog.showOpenDialog(null, options).then((result) => {
-        if (!result.canceled) {
-            const folderPath = result.filePaths[0];
-            event.sender.send('selected-folder', folderPath);
+    const result = await dialog.showOpenDialog(null, options);
+
+    if (!result.canceled) {
+        const folderPath = result.filePaths[0];
+        const gitFolderPath = path.join(folderPath, '.git');
+
+        let isGitRepo = false;
+        if (fs.existsSync(gitFolderPath)) {
+            isGitRepo = true;
         }
-    });
+
+        if (!isGitRepo) {
+            const result = await exec(`git -C "${folderPath}" init`);
+            await exec(`git -C "${folderPath}" checkout -b main`);
+        }
+        console.log('result:', result)
+        event.sender.send('selected-folder', { folderPath, isGitRepo });
+    }
 });
 ipcMain.on('created-new-branch', (event, newBranchName) => {
     console.log(newBranchName);
@@ -119,4 +163,22 @@ ipcMain.handle('set-git-config', async (event, username, email) => {
     } catch (error) {
         return error.message;
     }
+});
+ipcMain.handle('update-branch-list', async (event, folderPath) => {
+    const branchList = (await exec(`git -C "${folderPath}" branch`)).stdout;
+    const branches = branchList.split('\n').filter(line => line.trim() !== '').map(branch => branch.trim());
+
+    return branches;
+});
+
+ipcMain.handle('show-commit-list', async (event, folderPath, selectedBranch) => {
+    if (!folderPath || selectedBranch === 'create-new-branch') {
+        console.log(`selected branch is ${selectedBranch}`);
+        return;
+    }
+
+    const options = '--pretty=format:"%cd - %h - %s %d" --decorate=short'
+    const commitLogOutput = (await exec(`git -C "${folderPath}" log ${options} ${selectedBranch}`)).stdout;
+
+    return commitLogOutput.split('\n');
 });

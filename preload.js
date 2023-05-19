@@ -17,6 +17,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return os.tmpdir();
     },
 });
+contextBridge.exposeInMainWorld(
+    'myAPI',
+    {
+        commitChanges: (message, folderPath) => ipcRenderer.send('commitChanges', message, folderPath),
+        onCommitChanges: (func) => ipcRenderer.on('commitChanges-reply', (event, args) => func(args)),
+        checkGitStatus: (folderPath) => ipcRenderer.send('checkGitStatus', folderPath),
+        onGitStatusChecked: (func) => ipcRenderer.on('checkGitStatus-reply', (event, args) => func(args)),
+        initializeGit: async (folderPath) => await ipcRenderer.invoke('initializeGit', folderPath),
+        updateBranchList: async (folderPath) => {
+            return await ipcRenderer.invoke('update-branch-list', folderPath);
+        },
+        showCommitList: async (folderPath, selectedBranch) => {
+            return await ipcRenderer.invoke('show-commit-list', folderPath, selectedBranch);
+        },
+    }
+)
 contextBridge.exposeInMainWorld('exec', {
     do: (command) => {
         return new Promise((resolve, reject) => {
