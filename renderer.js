@@ -7,7 +7,6 @@ const gitStatusSpan = document.getElementById('git-status');
 const branchSelect = document.getElementById('branch-select');
 
 let busy = false;
-// フォルダを再帰的に走査する関数
 
 saveBtn.addEventListener('click', () => {
     const folderPath = folderPathSpan.textContent;
@@ -103,6 +102,7 @@ async function commitChanges(message) {
         console.log(changes)
         // 変更がある場合のみコミット
         if (changes.length > 0) {
+            gitStatusSpan.innerHTML = '<span style="color: yellow;">&#11044;</span>';
             // すべての変更をadd
             await window.exec.do(`git -C "${folderPath}" add .`);
 
@@ -110,8 +110,10 @@ async function commitChanges(message) {
             const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
             console.log(`Commit successful: ${commitResult}`);
             busy = false
+            gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
             return commitResult;
         } else {
+            gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
             console.log('No changes detected');
             busy = false
             return null;
@@ -287,13 +289,14 @@ window.ipc.on('selected-folder', (folderPath) => {
 
                 const mainBranchResult = await window.exec.do(`git -C "${folderPath}" checkout -b main`);
                 console.log(`checkedout to main: ${mainBranchResult}`);
+                await window.exec.do(`git -C "${folderPath}" add .gitignore`);
+                await window.exec.do(`git -C "${folderPath}" commit -m "initialize your"`);
                 busy = false;
-                await commitChanges();
-                gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+                gitStatusSpan.innerHTML = '<span style="color: yellow;">&#11044;</span>';
             }
         } else {
             // .gitフォルダが存在する場合
-            gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
+            gitStatusSpan.innerHTML = '<span style="color: yellow;">&#11044;</span>';
         }
 
         await updateBranchList(folderPath);

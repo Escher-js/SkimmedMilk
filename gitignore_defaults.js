@@ -10,3 +10,4 @@ const defaultGitignoreContent = `
 module.exports = {
     defaultGitignoreContent,
 };
+//
