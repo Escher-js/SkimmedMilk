@@ -24,7 +24,7 @@ async function scanFolderRecursive(folderPath, ig) {
         } else {
             const fileSizeInBytes = fileStat.size;
             const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
-            if (fileSizeInMegabytes > 1) {
+            if (fileSizeInMegabytes > 1000) {
                 filesToTrack.push(absolutePath);
             }
         }

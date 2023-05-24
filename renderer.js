@@ -40,13 +40,13 @@ branchSelect.addEventListener('change', async () => {
     changeBranch(selectedBranch);
 });
 
-window.addEventListener('beforeunload', async (event) => {
-    const folderPath = folderPathSpan.textContent;
-    if (folderPath) {
-        await commitChanges('Auto-commit on window close');
-        await showCommitList();
-    }
-});
+// window.addEventListener('beforeunload', async (event) => {
+//     const folderPath = folderPathSpan.textContent;
+//     if (folderPath) {
+//         await commitChanges('Auto-commit on window close');
+//         await showCommitList();
+//     }
+// });
 async function changeBranch(selectedBranch) {
     const folderPath = folderPathSpan.textContent;
     const changeBranchResult = await window.exec.do(`git -C "${folderPath}" checkout "${selectedBranch}"`)
@@ -103,8 +103,15 @@ async function commitChanges(message) {
         // 変更がある場合のみコミット
         if (changes.length > 0) {
             gitStatusSpan.innerHTML = '<span style="color: yellow;">&#11044;</span>';
-            // すべての変更をadd
-            await window.exec.do(`git -C "${folderPath}" add .`);
+            // 変更のあるフォルダごとにadd
+            const folders = new Set(changes.map(change => change.substring(3).split('/')[0]));
+            let progress = 0;
+            console.log(`git is busy: ${Math.round((progress / folders.size) * 100)}%`);
+            for (const folder of folders) {
+                await window.exec.do(`git -C "${folderPath}" add "${folder}"`);
+                progress++;
+                console.log(`git is busy: ${Math.round((progress / folders.size) * 100)}%`);
+            }
 
             // まとめてコミット
             const commitResult = await window.exec.do(`git -C "${folderPath}" commit -m "${message}"`)
@@ -123,6 +130,7 @@ async function commitChanges(message) {
         return null;
     }
 }
+
 async function showCommitList() {
     const selectedBranch = branchSelect.options[branchSelect.selectedIndex].value;
     const folderPath = folderPathSpan.textContent;
