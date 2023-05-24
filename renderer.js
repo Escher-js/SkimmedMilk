@@ -103,37 +103,6 @@ async function commitChanges(message) {
         console.log(changes)
         // 変更がある場合のみコミット
         if (changes.length > 0) {
-            // const lfsFiles = [];
-            // for (const change of changes) {
-            //     console.log(change)
-            //     if (change.trim().startsWith("D")) { continue }
-            //     const relativeFilePath = change.replace(/^.+?\s+/, '');
-            //     if (relativeFilePath.startsWith(".")) { continue }
-            //     let filePath;
-
-            //     // 変更がリネーム（'R'）の場合、新旧のファイル名が ' -> ' で分割されている
-            //     if (change.startsWith('R')) {
-            //         const renameParts = relativeFilePath.split(' -> ');
-            //         // 新しいファイル名を取得
-            //         relativeFilePath = renameParts[1];
-            //     }
-
-            //     filePath = path.join(folderPath, unescapeFromGit(relativeFilePath));
-            //     const escapedFilePath = window.shellEscape.escape(filePath);
-            //     const fileSizeInBytes = window.fs.statSyncSize(filePath);
-            //     const fileSizeInMegabytes = fileSizeInBytes / (1024 * 1024);
-
-            //     // ファイルサイズが1MB以上なら git lfsで追跡リストに追加
-            //     if (fileSizeInMegabytes > 1) {
-            //         lfsFiles.push(escapedFilePath);
-            //     }
-            // }
-
-            // // LFSで追跡すべきファイルをgit lfs trackで追加
-            // for (const file of lfsFiles) {
-            //     await window.exec.do(`git -C "${folderPath}" lfs track ${file}`);
-            // }
-
             // すべての変更をadd
             await window.exec.do(`git -C "${folderPath}" add .`);
 
@@ -300,16 +269,22 @@ window.ipc.on('selected-folder', (folderPath) => {
                 busy = true;
                 const initResult = await window.exec.do(`git -C "${folderPath}" init`);
                 console.log(`gitinit: ${initResult}`);
-                window.git.initignore(folderPath);
+                await window.git.initignore(folderPath);
                 // フォルダ内のすべてのファイルを走査して、1MB以上のファイルをリストアップ
+
+                // Scan folder
+                console.log("started to search large files to track by LFS")
                 const lfsFiles = await window.electronAPI.scanFolder(folderPath);
-                console.log(lfsFiles)
-                // LFSで追跡すべきファイルをgit lfs trackで追加
+
                 for (const file of lfsFiles) {
-                    const escapedFilePath = window.shellEscape.escape(file);
-                    console.log(escapedFilePath)
-                    await window.exec.do(`git -C "${folderPath}" lfs track ${escapedFilePath}`);
+                    await window.git.appendToGitignore(folderPath, file);
                 }
+                // LFSで追跡すべきファイルをgit lfs trackで追加
+                // for (const file of lfsFiles) {
+                //     const escapedFilePath = window.shellEscape.escape(file);
+                //     console.log(escapedFilePath)
+                //     await window.exec.do(`git -C "${folderPath}" lfs track ${escapedFilePath}`);
+                // }
 
                 const mainBranchResult = await window.exec.do(`git -C "${folderPath}" checkout -b main`);
                 console.log(`checkedout to main: ${mainBranchResult}`);

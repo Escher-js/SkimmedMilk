@@ -5,17 +5,21 @@ const { exec } = require('child_process');
 const gitignoreDefaults = require('./gitignore_defaults');
 const path = require('path');
 const os = require('os');
+const ignore = require('ignore');
 
-async function scanFolder(folderPath) {
+async function scanFolderRecursive(folderPath, ig) {
     let filesToTrack = [];
     const files = fs.readdirSync(folderPath);
 
     for (const file of files) {
         const absolutePath = path.join(folderPath, file);
+        if (ig.ignores(file)) {
+            continue;
+        }
         const fileStat = fs.statSync(absolutePath);
 
         if (fileStat.isDirectory()) {
-            const innerFiles = await scanFolder(absolutePath);
+            const innerFiles = await scanFolderRecursive(absolutePath, ig);
             filesToTrack = filesToTrack.concat(innerFiles);
         } else {
             const fileSizeInBytes = fileStat.size;
@@ -27,6 +31,16 @@ async function scanFolder(folderPath) {
     }
     return filesToTrack;
 }
+async function scanFolder(folderPath) {
+    const ignorePath = path.join(folderPath, '.gitignore');
+    console.log("ig:", ignorePath)
+    const gitignoreContent = fs.readFileSync(ignorePath).toString();
+    console.log("igContents:", gitignoreContent)
+    const ig = ignore().add(gitignoreContent);
+    console.log("ig:", ig)
+    return scanFolderRecursive(folderPath, ig)
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
     /* external library */
     getDiffHtml: (diff) => {
@@ -86,6 +100,9 @@ contextBridge.exposeInMainWorld('path', {
         console.log(path)
         return path.dirname(paths);
     },
+    relative: (paths) => {
+        return path.relative(paths)
+    }
 });
 contextBridge.exposeInMainWorld('ipc', {
 
@@ -141,14 +158,32 @@ contextBridge.exposeInMainWorld('fs', {
     },
 });
 contextBridge.exposeInMainWorld('git', {
-    initignore: (folderPath) => {
-        fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults.defaultGitignoreContent, (error) => {
-            if (error) {
-                console.error(`Error: ${error.message}`);
-                return;
-            }
-            console.log('Created .gitignore file');
-        });
+    initignore: async (folderPath) => {
+        return new Promise((resolve, reject) => {
+            fs.writeFile(`${folderPath}/.gitignore`, gitignoreDefaults.defaultGitignoreContent, (error) => {
+                if (error) {
+                    console.error(`Error: ${error.message}`)
+                    reject(error)
+                } else {
+                    console.log('Created .gitignore file')
+                    resolve()
+                }
+            })
+        })
+    },
+    appendToGitignore: async (folderPath, absolutefilePaths) => {
+        return new Promise((resolve, reject) => {
+            const relative = path.relative(folderPath, absolutefilePaths)
+            fs.appendFile(`${folderPath}/.gitignore`, `\n${relative}`, (error) => {
+                if (error) {
+                    console.error(`Error: ${error.message}`)
+                    reject(error)
+                } else {
+                    console.log('Appended to .gitignore file')
+                    resolve()
+                }
+            })
+        })
     },
     setConfig: async (username, email) => {
         return await ipcRenderer.invoke('set-git-config', username, email);
