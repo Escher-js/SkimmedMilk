@@ -141,7 +141,6 @@ async function showCommitList() {
     commitListContainer.innerHTML = '';
     commitListContainer.style.display = 'table';
 
-    commitLines.pop()
     commitLines.forEach((commit) => {
         const tableRow = document.createElement('tr'); // Each commit will be a table row
         const [date, hash, rest] = commit.split(' - ');
