@@ -50,6 +50,11 @@ function runGitCommand(command) {
 
 app.whenReady().then(async () => {
     createWindow();
+    // Get the user's OS
+    const userOS = process.platform;
+
+    // Log the user's OS
+    console.log('User OS:', userOS);
     try {
         const [username, email] = await Promise.all([
             runGitCommand('git config --global user.name'),
@@ -115,6 +120,14 @@ ipcMain.handle('set-git-config', async (event, username, email) => {
             runGitCommand(`git config --global user.name "${username}"`),
             runGitCommand(`git config --global user.email "${email}"`),
         ]);
+        if (userOS === "win32") {
+            await Promise.all([
+                runGitCommand("git config --global core.quotepath false"),
+                runGitCommand('git config --global pager.diff "LC_ALL=ja_JP.UTF-8 less -Sx4"'),
+                runGitCommand('git config --global diff.cp932.textconv "iconv -f cp932 -t utf-8"'),
+                runGitCommand('git config --global diff.sjis.textconv "iconv -f sjis -t utf-8"')
+            ])
+        }
         return 'success';
     } catch (error) {
         return error.message;

@@ -39,7 +39,6 @@ branchSelect.addEventListener('change', async () => {
     // 選択されたブランチにチェックアウト
     changeBranch(selectedBranch);
 });
-
 // window.addEventListener('beforeunload', async (event) => {
 //     const folderPath = folderPathSpan.textContent;
 //     if (folderPath) {
@@ -95,13 +94,13 @@ async function commitChanges(message) {
     if (folderPath.trim() === '') return null;
     if (busy === false) {
         busy = true
-        console.log(folderPath)
         // git status を実行して変更を検出
         const gitStatusOutput = await window.exec.do(`git -C "${folderPath}" status --porcelain`)
         const changes = gitStatusOutput.split('\n').filter(line => line.trim() !== '')
-        console.log(changes)
         // 変更がある場合のみコミット
         if (changes.length > 0) {
+            console.log(`working in ${folderPath}`)
+            console.log(`these files have been changed: ${changes}`)
             gitStatusSpan.innerHTML = '<span style="color: yellow;">&#11044;</span>';
             // 変更のあるフォルダごとにadd
             const folders = new Set(changes.map(change => change.substring(3).split('/')[0]));
@@ -121,7 +120,6 @@ async function commitChanges(message) {
             return commitResult;
         } else {
             gitStatusSpan.innerHTML = '<span style="color: blue;">&#11044;</span>';
-            console.log('No changes detected');
             busy = false
             return null;
         }
@@ -245,7 +243,6 @@ async function getCommitDiff(commitHash) {
         console.error(`Error: ${error.message}`);
     }
 }
-
 async function showDiff(diffData) {
     const diffContainer = document.getElementById('diff-container');
 
